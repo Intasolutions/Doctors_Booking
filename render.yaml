@@ -1,0 +1,85 @@
+# Render blueprint for the CareSlot API and its scheduled jobs.
+# The website (web/) deploys separately on Vercel.
+#
+# The API must be on a paid, always-on plan: Meta's webhook needs a fast
+# reply, and a sleeping free instance makes Meta retry and the bot double-reply.
+services:
+  - type: web
+    name: careslot-api
+    runtime: python
+    rootDir: backend
+    plan: starter
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 30"
+    healthCheckPath: /health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: DATABASE_URL
+        sync: false # paste the Neon connection string
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false # e.g. https://careslot.vercel.app
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false # e.g. https://careslot-api.onrender.com
+      - key: CARESLOT_SITE_URL
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        generateValue: true
+      - key: WHATSAPP_BUSINESS_NUMBER
+        sync: false
+
+  # Reminders 24 hours before each visit. Runs every hour.
+  - type: cron
+    name: careslot-reminders
+    runtime: python
+    rootDir: backend
+    plan: starter
+    schedule: "5 * * * *"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python manage.py send_reminders"
+    envVars:
+      - fromGroup: careslot-shared
+
+  # Doctors' morning summary at 7:00 AM IST (01:30 UTC).
+  - type: cron
+    name: careslot-daily-summary
+    runtime: python
+    rootDir: backend
+    plan: starter
+    schedule: "30 1 * * *"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python manage.py send_daily_summary"
+    envVars:
+      - fromGroup: careslot-shared
+
+envVarGroups:
+  # The cron jobs need the same database and WhatsApp settings as the API.
+  # Fill these in the Render dashboard.
+  - name: careslot-shared
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: DATABASE_URL
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_BUSINESS_NUMBER
+        sync: false

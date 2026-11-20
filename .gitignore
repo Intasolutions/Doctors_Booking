@@ -1,0 +1,28 @@
+# Python
+backend/venv/
+__pycache__/
+*.pyc
+backend/db.sqlite3
+backend/staticfiles/
+
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Node / Next / Expo
+node_modules/
+web/.next/
+web/out/
+web/next-env.d.ts
+*.tsbuildinfo
+mobile/.expo/
+mobile/dist/
+mobile/android/
+mobile/ios/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
