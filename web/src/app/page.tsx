@@ -3,6 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { LocateFixed, MapPin, MapPinOff, MessageCircle, Search } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { SiteFooter, SiteHeader } from "@/components/site-header";
@@ -11,6 +12,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { rupees, waNumberDisplay } from "@/lib/format";
 import { kmLabel, useGeolocation } from "@/lib/location";
+import { rememberSlot } from "@/lib/pending-slot";
 import type { Doctor, Meta } from "@/lib/types";
 
 const RADII = [
@@ -29,7 +31,7 @@ function LocationBar({ geo, area, setArea, areas }: { geo: ReturnType<typeof use
     );
   if (geo.status === "ready")
     return (
-      <p className="flex items-center gap-2 text-sm font-semibold text-brand-dark">
+      <p className="flex items-center gap-2 text-sm font-semibold text-accent-dark">
         <MapPin className="size-4" aria-hidden /> Showing doctors nearest to you
       </p>
     );
@@ -54,6 +56,7 @@ function LocationBar({ geo, area, setArea, areas }: { geo: ReturnType<typeof use
 
 export default function HomePage() {
   const { user } = useAuth();
+  const router = useRouter();
   const geo = useGeolocation();
   const [q, setQ] = useState("");
   const [spec, setSpec] = useState("");
@@ -160,7 +163,7 @@ export default function HomePage() {
                   <p className="text-[13px]">{d.qualifications}</p>
                 </div>
                 {d.distance_km != null && (
-                  <span className="shrink-0 rounded-full bg-brand-soft px-2.5 py-1 text-xs font-bold text-brand-dark">{kmLabel(d.distance_km).replace(" away", "")}</span>
+                  <span className="shrink-0 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent-dark">{kmLabel(d.distance_km).replace(" away", "")}</span>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted">
@@ -172,12 +175,33 @@ export default function HomePage() {
                   <b className="text-ink">{rupees(d.fee)}</b> consultation
                 </span>
               </div>
-              <p className="rounded-lg bg-canvas px-3 py-2 text-[13px]">
-                Next free: <b>{d.next_available?.label || "no slots this week"}</b>
-              </p>
+              {d.next_slots ? (
+                <div className="grid gap-2 rounded-xl bg-accent-soft p-3">
+                  <p className="text-[13px] text-accent-dark">
+                    Next free · <b>{d.next_slots.label}</b>
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {d.next_slots.times.map((t) => (
+                      <button
+                        key={t.time}
+                        onClick={() => {
+                          rememberSlot(d.slug, d.next_slots!.date, t.time);
+                          router.push(`/doctors/${d.slug}`);
+                        }}
+                        className="tabular rounded-lg border border-accent/40 bg-surface px-2.5 py-1.5 text-[13px] font-semibold text-accent-dark hover:border-accent hover:bg-white"
+                        aria-label={`Book ${d.name} at ${t.label}, ${d.next_slots!.label}`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="rounded-lg bg-canvas px-3 py-2 text-[13px] text-muted">No free times in the next two weeks</p>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Link href={`/doctors/${d.slug}`} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">
-                  Book visit
+                  More times
                 </Link>
                 <a href={d.whatsapp_link} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:border-muted">
                   <MessageCircle className="size-4" aria-hidden /> WhatsApp

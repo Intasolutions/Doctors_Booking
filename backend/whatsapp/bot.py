@@ -119,7 +119,7 @@ class PatientBot:
 
     def patients(self) -> list[Patient]:
         seen, out = set(), []
-        for p in Patient.objects.filter(Q(account__phone=self.phone) | Q(phone=self.phone)).order_by("id"):
+        for p in Patient.objects.filter(Q(account__phone=self.phone) | Q(phone=self.phone), removed_at__isnull=True).order_by("id"):
             key = p.name.strip().lower()
             if key not in seen:
                 seen.add(key)
@@ -236,7 +236,7 @@ class PatientBot:
                 r = S.rel_date(day)
                 rows.append({
                     "id": f"date:{day.isoformat()}",
-                    "title": f"{r} · {S.fmt_date(day)}" if r in ("Today", "Tomorrow") else S.fmt_date(day),
+                    "title": f"{r} · {S.fmt_date(day)}" if r in ("Today", "Tomorrow") else f"{day:%a} · {S.fmt_date(day)}",
                     "description": f"{len(f)} slots free · from {S.fmt_time(f[0])}",
                 })
             if len(rows) == 10:
@@ -255,13 +255,13 @@ class PatientBot:
         day = S.parse_date(day)
         free = spread(S.free_slots(d, day), 10)
         if not free:
-            return self.buttons(f"No free slots left on {S.rel_date(day)}.", [("pickday", "Pick another day")])
+            return self.buttons(f"No free slots left on {S.day_label(day)}.", [("pickday", "Pick another day")])
         sections = {}
         for t in free:
             sections.setdefault(period(t), []).append({"id": f"time:{t:%H:%M}", "title": S.fmt_time(t)})
         wa.send_list(
             self.phone,
-            f"*{S.rel_date(day)}, {S.fmt_date(day)}*\nFree times with {d.name}. Each visit is about {d.slot_minutes} minutes.",
+            f"*{S.day_label(day)}*\nFree times with {d.name}. Each visit is about {d.slot_minutes} minutes.",
             "Choose a time",
             [{"title": k, "rows": v} for k, v in sections.items()],
         )
@@ -534,10 +534,10 @@ class DoctorBot:
         appts = list(Appointment.objects.filter(doctor=self.d, date=day).exclude(status="cancelled")
                      .select_related("patient").order_by("start"))
         if not appts:
-            return self.say(f"*{S.rel_date(day)} · {S.fmt_date(day)}*\nNo appointments yet.")
+            return self.say(f"*{S.day_label(day)}*\nNo appointments yet.")
         lines = [f"{S.fmt_time(a.start)} · {a.patient.name}{' (' + str(a.patient.age) + ')' if a.patient.age else ''}"
                  f" · {a.reason or 'Consultation'}{MARK.get(a.status, '')}" for a in appts]
-        self.say(f"*{S.rel_date(day)} · {S.fmt_date(day)}* · {len(appts)} patients\n\n" + "\n".join(lines))
+        self.say(f"*{S.day_label(day)}* · {len(appts)} patients\n\n" + "\n".join(lines))
 
     def on_text(self, raw: str):
         t = raw.strip().lower()
@@ -563,7 +563,7 @@ class DoctorBot:
             start = parse_clock(m.group(1), m.group(2), m.group(3) or m.group(6))
             end = parse_clock(m.group(4), m.group(5), m.group(6) or m.group(3))
             block, hit = S.add_block(self.d, day, start, end, reason="Blocked on WhatsApp")
-            return self.say(f"Done. Blocked *{S.fmt_time(block.start)} – {S.fmt_time(block.end)}* {S.rel_date(day).lower()}.\n"
+            return self.say(f"Done. Blocked *{S.fmt_time(block.start)} – {S.fmt_time(block.end)}* on {S.day_label(day)}.\n"
                             + (f"{len(hit)} patient{'s were' if len(hit) > 1 else ' was'} told on WhatsApp and offered new slots."
                                if hit else "No patients were booked in that time."))
         m = LEAVE_RE.match(t)

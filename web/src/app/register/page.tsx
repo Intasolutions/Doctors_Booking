@@ -132,10 +132,16 @@ function Register() {
             });
           }}
         >
-          <ProfileFields value={profile} onChange={setProfile} errors={fields} />
-          <Field label="Mobile number (WhatsApp)" htmlFor="rphone" error={fields.phone} hint="We'll send a code to this number on WhatsApp.">
-            <input id="rphone" className="input" inputMode="tel" autoComplete="tel" placeholder="98470 12345" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-          </Field>
+          <ProfileFields
+            value={profile}
+            onChange={setProfile}
+            errors={fields}
+            afterName={
+              <Field label="Mobile number (WhatsApp)" htmlFor="rphone" error={fields.phone} hint="We'll send a 6-digit code to this number on WhatsApp.">
+                <input id="rphone" className="input" type="tel" inputMode="tel" autoComplete="tel" placeholder="98470 12345" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+              </Field>
+            }
+          />
           {already && (
             <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
               This number is already registered.{" "}
@@ -173,7 +179,17 @@ function Register() {
             </p>
           )}
           <Field label="6-digit code" htmlFor="rcode" error={fields.code}>
-            <input id="rcode" className="input tabular tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} required autoFocus />
+            <input id="rcode" className="input tabular tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => {
+                const c = e.target.value.replace(/\D/g, "").slice(0, 6);
+                setCode(c);
+                // Create the account as soon as the 6th digit is typed.
+                if (c.length === 6 && !busy)
+                  run(async () => {
+                    const t = await api<TokenResponse>("/auth/register/", { method: "POST", body: { ...profile, phone, code: c }, auth: false });
+                    signIn(t);
+                    router.replace(next);
+                  });
+              }} required autoFocus />
           </Field>
           <ErrorNote>{error}</ErrorNote>
           <Button variant="primary" type="submit" loading={busy} disabled={code.length !== 6}>

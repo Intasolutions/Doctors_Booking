@@ -1,5 +1,6 @@
 "use client";
 
+import { DateInput } from "./date-time-inputs";
 import { Field, Segmented } from "./ui";
 
 export type ProfileValues = { name: string; gender: string; date_of_birth: string; email: string; consent: boolean };
@@ -25,11 +26,13 @@ export function ProfileFields({
   onChange,
   errors = {},
   showConsent = true,
+  afterName,
 }: {
   value: ProfileValues;
   onChange: (v: ProfileValues) => void;
   errors?: Record<string, string>;
   showConsent?: boolean;
+  afterName?: React.ReactNode;
 }) {
   const set = (k: keyof ProfileValues, v: string | boolean) => onChange({ ...value, [k]: v });
   return (
@@ -37,6 +40,7 @@ export function ProfileFields({
       <Field label="Full name" htmlFor="rname" error={errors.name}>
         <input id="rname" className="input" autoComplete="name" value={value.name} onChange={(e) => set("name", e.target.value)} required />
       </Field>
+      {afterName}
       <div className="grid gap-1.5">
         <span className="text-[13px] font-semibold">Gender</span>
         <Segmented
@@ -51,7 +55,7 @@ export function ProfileFields({
         {errors.gender && <p className="text-xs font-medium text-red-700">{errors.gender}</p>}
       </div>
       <Field label="Date of birth" htmlFor="rdob" error={errors.date_of_birth} hint="Doctors use your age when they see you.">
-        <input id="rdob" type="date" className="input" max={todayISO()} min="1900-01-01" value={value.date_of_birth} onChange={(e) => set("date_of_birth", e.target.value)} required />
+        <DateInput id="rdob" value={value.date_of_birth} onChange={(v) => set("date_of_birth", v)} min="1900-01-01" max={todayISO()} required />
       </Field>
       <Field label="Email (optional)" htmlFor="remail" error={errors.email}>
         <input id="remail" type="email" className="input" autoComplete="email" value={value.email} onChange={(e) => set("email", e.target.value)} />

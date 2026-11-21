@@ -5,7 +5,9 @@ import { Copy } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useState, useSyncExternalStore } from "react";
 
+import { PageHeader } from "@/components/page-header";
 import { usePortal } from "@/components/portal";
+import { useToast } from "@/components/toast";
 import { Button, ErrorNote, Field, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { Doctor } from "@/lib/types";
@@ -45,10 +47,7 @@ export default function SharePage() {
   const d = q.data;
   return (
     <>
-      <div>
-        <p className="label">Profile, link & QR</p>
-        <h1 className="text-2xl font-extrabold">Let patients book you directly</h1>
-      </div>
+      <PageHeader eyebrow="Practice" title="Profile, link and QR" description="Patients scan the QR code or open the link to book with this doctor directly." />
       <div className="card grid gap-6 p-5 sm:grid-cols-[auto_minmax(0,1fr)]">
         <div className="justify-self-start rounded-xl border border-line bg-white p-3">
           <QRCodeSVG value={d.whatsapp_link} size={184} level="M" aria-label={`QR code to book ${d.name} on WhatsApp`} />
@@ -70,6 +69,7 @@ export default function SharePage() {
 
 function ProfileForm({ d, onSaved }: { d: Doctor; onSaved: () => void }) {
   const { params } = usePortal();
+  const toast = useToast();
   const [form, setForm] = useState({
     fee: String(d.fee),
     about: d.about,
@@ -95,7 +95,10 @@ function ProfileForm({ d, onSaved }: { d: Doctor; onSaved: () => void }) {
           longitude: form.longitude === "" ? null : Number(form.longitude),
         },
       }),
-    onSuccess: onSaved,
+    onSuccess: () => {
+      toast.success("Profile saved. Patients see the changes now.");
+      onSaved();
+    },
   });
   const useHere = () => {
     if (!("geolocation" in navigator)) return setLocating("This browser can't share its location.");
@@ -162,7 +165,6 @@ function ProfileForm({ d, onSaved }: { d: Doctor; onSaved: () => void }) {
           <Button variant="primary" type="submit" loading={save.isPending} disabled={!coordsOk}>
             Save profile
           </Button>
-          {save.isSuccess && <span className="text-sm font-semibold text-emerald-700">Saved.</span>}
         </div>
       </form>
     </>

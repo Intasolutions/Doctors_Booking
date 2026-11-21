@@ -13,7 +13,7 @@ import type { TokenResponse } from "@/lib/types";
 type OtpSent = { sent: boolean; phone_display: string; is_new: boolean; dev_code?: string };
 
 function nextUrl(next: string | null, role: string) {
-  const fallback = role === "patient" ? "/appointments" : "/portal";
+  const fallback = role === "patient" ? "/appointments" : role === "admin" ? "/admin" : "/portal";
   return next && next.startsWith("/") && !next.startsWith("//") ? next : fallback;
 }
 
@@ -36,7 +36,13 @@ function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
   const [mode, setMode] = useState<"otp" | "password">(search.get("as") === "staff" ? "password" : "otp");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(() => {
+    try {
+      return localStorage.getItem("careslot.lastPhone") || "";
+    } catch {
+      return "";
+    }
+  });
   const [sent, setSent] = useState<OtpSent | null>(null);
   const [code, setCode] = useState("");
   const [username, setUsername] = useState("");
@@ -92,7 +98,12 @@ function LoginForm() {
             className="card grid gap-4 p-5"
             onSubmit={(e) => {
               e.preventDefault();
-              run(async () => setSent(await api<OtpSent>("/auth/otp/request/", { method: "POST", body: { phone }, auth: false })));
+              run(async () => {
+                setSent(await api<OtpSent>("/auth/otp/request/", { method: "POST", body: { phone }, auth: false }));
+                try {
+                  localStorage.setItem("careslot.lastPhone", phone);
+                } catch {}
+              });
             }}
           >
             <Field label="Mobile number (WhatsApp)" htmlFor="phone">
@@ -125,7 +136,12 @@ function LoginForm() {
               </p>
             )}
             <Field label="6-digit code" htmlFor="code">
-              <input id="code" className="input tabular tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} required autoFocus />
+              <input id="code" className="input tabular tracking-[0.3em]" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => {
+                const c = e.target.value.replace(/\D/g, "").slice(0, 6);
+                setCode(c);
+                // Sign in as soon as the 6th digit is typed.
+                if (c.length === 6 && !busy) run(async () => done(await api<TokenResponse>("/auth/otp/verify/", { method: "POST", body: { phone, code: c }, auth: false })));
+              }} required autoFocus />
             </Field>
             {sent.is_new && (
               <p className="rounded-lg bg-canvas px-3 py-2 text-sm">

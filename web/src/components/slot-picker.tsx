@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import { api } from "@/lib/api";
+import { dayName, fmtDate } from "@/lib/format";
 import type { DayInfo, DaySlots, Slot } from "@/lib/types";
 
 import { Spinner } from "./ui";
@@ -58,12 +59,13 @@ export function SlotPicker({
   if (days.isError) return <p className="text-sm text-red-700">Couldn&apos;t load this doctor&apos;s times. Refresh to try again.</p>;
 
   const groups: Record<string, Slot[]> = {};
-  for (const s of slots.data?.slots || []) (groups[period(s.time)] ||= []).push(s);
-  const anyFree = slots.data?.slots.some((s) => s.status === "free");
+  const upcoming = (slots.data?.slots || []).filter((s) => s.status !== "past");
+  for (const s of upcoming) (groups[period(s.time)] ||= []).push(s);
+  const anyFree = upcoming.some((s) => s.status === "free");
 
   return (
-    <div className="grid gap-5">
-      <div>
+    <div className="grid min-w-0 grid-cols-1 gap-5">
+      <div className="min-w-0">
         <p className="label mb-2">Choose a day</p>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {days.data!.map((d) => (
@@ -79,7 +81,8 @@ export function SlotPicker({
                 d.date === date ? "border-brand bg-brand-soft" : "border-line bg-surface hover:border-muted"
               }`}
             >
-              <span className="block text-[13.5px] font-bold">{d.label === d.short ? d.short.slice(0, 6) : d.label}</span>
+              <span className="block text-[13.5px] font-bold">{dayName(d.date)}</span>
+              <span className="block text-xs tabular">{fmtDate(d.date)}</span>
               <span className="text-xs text-muted">{d.on_leave ? "On leave" : d.closed ? "Closed" : d.free ? `${d.free} free` : "Full"}</span>
             </button>
           ))}
@@ -118,7 +121,7 @@ export function SlotPicker({
         </div>
       ))}
       {slots.data && slots.data.slots.length > 0 && !anyFree && (
-        <p className="text-sm text-muted">Every slot on this day is taken. Try another day.</p>
+        <p className="text-sm text-muted">{upcoming.length ? "Every time on this day is taken." : "No more times today."} Try another day.</p>
       )}
     </div>
   );

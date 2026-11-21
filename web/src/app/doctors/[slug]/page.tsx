@@ -4,17 +4,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarCheck, Clock, Languages, MapPin, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { SlotPicker } from "@/components/slot-picker";
 import { Avatar, Button, Empty, ErrorNote, Field, Segmented, Spinner } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { fmtDate, fmtTime, rupees } from "@/lib/format";
+import { PENDING_SLOT } from "@/lib/pending-slot";
+import { fmtDate, fmtTime, groupHours, rupees } from "@/lib/format";
 import type { Appointment, Doctor, Patient } from "@/lib/types";
 
-const PENDING = "careslot.pending";
+const PENDING = PENDING_SLOT;
 
 /** A slot the patient picked before being sent to sign in. */
 function readPending(slug: string): { date: string; time: string } | null {
@@ -50,6 +51,12 @@ export default function DoctorPage() {
       sessionStorage.removeItem(PENDING);
     } catch {}
   }, []);
+
+  // Once a time is picked, bring the rest of the booking form into view.
+  const formRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (time) formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [time]);
 
   const book = useMutation({
     mutationFn: () =>
@@ -112,8 +119,8 @@ export default function DoctorPage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto grid w-full max-w-6xl gap-8 px-4 pb-16 pt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <section className="grid content-start gap-5">
+      <main className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-4 pb-16 pt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+        <section className="grid min-w-0 grid-cols-1 content-start gap-5">
           <div className="flex items-center gap-4">
             <Avatar name={d.name} size="lg" />
             <div className="min-w-0">
@@ -140,9 +147,10 @@ export default function DoctorPage() {
               <Clock className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
               <div>
                 <dt className="sr-only">Consultation hours</dt>
-                {d.hours.map((h) => (
-                  <dd key={h.day}>
-                    <span className="inline-block w-10 font-semibold">{h.day}</span> {h.sessions.join(", ")}
+                {groupHours(d.hours).map((h) => (
+                  <dd key={h.days} className="flex flex-wrap gap-x-3">
+                    <span className="min-w-20 font-semibold">{h.days}</span>
+                    <span>{h.sessions.join(", ")}</span>
                   </dd>
                 ))}
               </div>
@@ -161,10 +169,10 @@ export default function DoctorPage() {
           </a>
         </section>
 
-        <section className="card grid content-start gap-5 p-5 sm:p-6" aria-label="Book a visit">
+        <section className="card grid min-w-0 grid-cols-1 content-start gap-5 p-5 sm:p-6" aria-label="Book a visit">
           {booked ? (
             <div className="grid justify-items-center gap-3 py-6 text-center">
-              <div className="grid size-14 place-items-center rounded-full bg-emerald-50 text-emerald-700">
+              <div className="grid size-14 place-items-center rounded-full bg-accent-soft text-accent-dark">
                 <CalendarCheck className="size-7" aria-hidden />
               </div>
               <h2 className="text-2xl font-extrabold">Your visit is booked</h2>
@@ -226,6 +234,7 @@ export default function DoctorPage() {
                 </div>
               )}
 
+              <div ref={formRef} />
               {time && date && user?.profile_complete && (
                 <form
                   className="grid gap-4 border-t border-line pt-5"

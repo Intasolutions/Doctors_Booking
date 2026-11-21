@@ -1,17 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, MessageSquareText, QrCode, Settings2 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useState } from "react";
 
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
-import { Spinner } from "./ui";
+import { Empty, Spinner, StatusTag } from "./ui";
 
-type AdminDoctor = { slug: string; name: string; specialty: string; is_active: boolean };
+type AdminDoctor = { slug: string; name: string; specialty: string; status: "active" | "inactive" | "deleted" };
 type PortalCtx = { slug: string; params: Record<string, string | undefined>; isAdmin: boolean };
 
 const Ctx = createContext<PortalCtx | null>(null);
@@ -23,12 +21,12 @@ export function usePortal() {
   return c;
 }
 
+/** Which doctor the practice pages show: the signed-in doctor, or the one an admin picks. */
 export function PortalShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const path = usePathname();
   const isAdmin = user?.role === "admin";
   const doctors = useQuery({ queryKey: ["admin-doctors"], queryFn: () => api<AdminDoctor[]>("/admin/doctors/"), enabled: isAdmin });
-  // The shell renders only after sign-in on the client, so reading storage here is safe.
+  // Rendered only after sign-in on the client, so reading storage here is safe.
   const [choice, setPicked] = useState<string>(() => {
     try {
       return localStorage.getItem(KEY) || "";
@@ -36,82 +34,54 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       return "";
     }
   });
-  const list = doctors.data || [];
+  const list = (doctors.data || []).filter((d) => d.status !== "deleted");
   const picked = list.some((d) => d.slug === choice) ? choice : list[0]?.slug || "";
+  const current = list.find((d) => d.slug === picked);
 
   const slug = isAdmin ? picked : user?.doctor?.slug || "";
-  const value = useMemo<PortalCtx>(() => ({ slug, params: isAdmin ? { doctor: slug } : {}, isAdmin }), [slug, isAdmin]);
-
-  const nav = [
-    { href: "/portal", label: "Today's queue", icon: CalendarDays },
-    { href: "/portal/availability", label: "Availability", icon: Settings2 },
-    { href: "/portal/share", label: "Profile, link & QR", icon: QrCode },
-    ...(isAdmin ? [{ href: "/portal/whatsapp", label: "WhatsApp tester", icon: MessageSquareText }] : []),
-  ];
+  const value: PortalCtx = { slug, params: isAdmin ? { doctor: slug } : {}, isAdmin };
 
   if (!user) return null;
   if (user.role === "doctor" && !user.doctor)
-    return <p className="py-10 text-muted">Your login isn&apos;t linked to a doctor profile yet. Ask the clinic admin to link it.</p>;
+    return <Empty title="Your login isn't linked to a doctor profile">Ask the clinic admin to finish setting up your profile.</Empty>;
   if (isAdmin && doctors.isLoading) return <Spinner />;
-  if (isAdmin && !doctors.data?.length)
+  if (isAdmin && !list.length)
     return (
-      <p className="py-10 text-muted">
-        No doctors yet. Add one in the Django admin (<code>/admin/clinic/doctor/add/</code>), then come back.
-      </p>
+      <Empty title="No doctors yet">
+        <Link href="/admin/doctors/new" className="text-sm font-semibold text-brand">
+          Add the first doctor
+        </Link>
+      </Empty>
     );
 
   return (
     <Ctx.Provider value={value}>
-      <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside className="grid content-start gap-4">
-          {isAdmin && (
-            <div className="grid gap-1.5">
-              <label htmlFor="pdoc" className="label">
-                Managing
-              </label>
-              <select
-                id="pdoc"
-                className="input"
-                value={picked}
-                onChange={(e) => {
-                  setPicked(e.target.value);
-                  try {
-                    localStorage.setItem(KEY, e.target.value);
-                  } catch {}
-                }}
-              >
-                {doctors.data?.map((d) => (
-                  <option key={d.slug} value={d.slug}>
-                    {d.name}
-                    {d.is_active ? "" : " (inactive)"}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {!isAdmin && user.doctor && (
-            <div>
-              <p className="font-display font-bold">{user.doctor.name}</p>
-              <p className="text-xs text-muted">WhatsApp code {user.doctor.code}</p>
-            </div>
-          )}
-          <nav className="grid grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-1" aria-label="Portal">
-            {nav.map(({ href, label, icon: Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold ${
-                  path === href ? "bg-surface text-ink shadow-sm ring-1 ring-line" : "text-muted hover:text-ink"
-                }`}
-              >
-                <Icon className="size-4 shrink-0" aria-hidden />
-                {label}
-              </Link>
+      {isAdmin && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand/20 bg-brand-soft px-4 py-3">
+          <label htmlFor="pdoc" className="text-sm font-semibold text-brand-dark">
+            Managing
+          </label>
+          <select
+            id="pdoc"
+            className="input w-auto min-w-56 bg-surface"
+            value={picked}
+            onChange={(e) => {
+              setPicked(e.target.value);
+              try {
+                localStorage.setItem(KEY, e.target.value);
+              } catch {}
+            }}
+          >
+            {list.map((d) => (
+              <option key={d.slug} value={d.slug}>
+                {d.name} · {d.specialty}
+              </option>
             ))}
-          </nav>
-        </aside>
-        <section className="grid min-w-0 content-start gap-5">{slug ? children : <Spinner />}</section>
-      </div>
+          </select>
+          {current && <StatusTag status={current.status} />}
+        </div>
+      )}
+      {slug ? children : <Spinner />}
     </Ctx.Provider>
   );
 }

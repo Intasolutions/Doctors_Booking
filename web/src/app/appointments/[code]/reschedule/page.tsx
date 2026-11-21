@@ -44,7 +44,7 @@ function Reschedule() {
     );
 
   return (
-    <div className="grid gap-6">
+    <div className="grid grid-cols-1 gap-6">
       <div className="grid gap-1">
         <p className="label">Reschedule {a.code}</p>
         <h1 className="text-3xl font-extrabold">Pick a new time with {a.doctor.name}</h1>
@@ -52,7 +52,7 @@ function Reschedule() {
           Currently {a.when}, for {a.patient.name}.
         </p>
       </div>
-      <div className="card grid gap-5 p-5">
+      <div className="card grid min-w-0 grid-cols-1 gap-5 p-5">
         <SlotPicker slug={a.doctor.slug} date={date} time={time} onDate={onDate} onTime={onTime} />
         <ErrorNote>{move.error?.message}</ErrorNote>
         <div className="flex flex-wrap gap-2">

@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "CareSlot",
+    "slug": "careslot",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "in.careslot.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E7EFFD",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "in.careslot.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "CareSlot uses your location to show the doctors nearest to you."
+        }
+      ]
+    ],
+    "scheme": "careslot",
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiBaseUrl": "http://10.0.2.2:8000/api"
+    }
+  }
+}

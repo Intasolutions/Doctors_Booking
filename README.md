@@ -9,7 +9,33 @@ mobile/    Expo (React Native) patient app for Android and iOS
 demo/      The original clickable HTML demo
 ```
 
-## Run it locally
+## Quick start on Windows (testing)
+
+Run these from PowerShell in the project folder:
+
+| Command | What it does |
+|---|---|
+| `.\scripts\setup.ps1` | One time: installs everything and creates the database with an admin and 4 sample doctors |
+| `.\scripts\start.ps1` | Opens the API and the website in their own windows (add `-WithApp` for the mobile app) |
+| `.\scripts\reset-data.ps1` | Clears **all** data (bookings, patients, accounts, messages) and keeps only the admin and sample doctors |
+
+If PowerShell refuses to run scripts, run this once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+
+Then open http://localhost:3000. Logins: `admin` / `careslot123`, and the doctors `dr.anitha`, `dr.rahul`, `dr.fathima` and `dr.joseph` / `careslot123`. While testing, the WhatsApp code appears on screen, and no real WhatsApp messages are sent.
+
+## Admin portal
+
+Sign in as an admin. The site opens **Admin** at http://localhost:3000/admin, which has full control:
+
+- **Overview:** today's visits, fees, no-shows, bookings by channel, every doctor's day, and warnings (doctors without a clinic location, failed WhatsApp messages).
+- **Bookings:** every booking for every doctor. Search and filter, book on someone's behalf, reschedule, cancel, set any status, or reopen a cancelled visit.
+- **Doctors:** add or edit doctors (login, phone, profile, clinic, map location, fee, slot length, WhatsApp code), turn bookings on or off, and jump to their hours, leave and queue.
+- **Users:** every patient, doctor and admin login. Edit details, disable a login, set passwords, make or remove admins, add staff admins, and erase a patient's data on request (DPDP).
+- **WhatsApp messages:** every conversation the bot has had, with failed messages flagged.
+
+Patients and doctors can't open any admin page or admin API.
+
+## Run it locally (manual)
 
 You need Python 3.12+ and Node.js 22.13+ (Expo 58 requires it; this PC has 22.12, so update Node before using the mobile app's lint and dev tools).
 
@@ -64,7 +90,14 @@ While `WHATSAPP_TOKEN` is empty, nothing is sent to Meta. Every message is store
 
 1. Django admin (`/admin/`) → **Users** → add a user with role **Doctor**, their name, and their WhatsApp number (`91XXXXXXXXXX`).
 2. **Doctors** → add a doctor linked to that user. Fill in specialty, area, address, fee and weekly sessions. Leave code and slug empty; they are generated (e.g. `DR-ANITHA`).
-3. The doctor signs in and downloads their QR code from **Profile, link & QR**.
+3. Set the **clinic location** (latitude and longitude). Without it the doctor appears after the nearby doctors. Either paste the numbers from Google Maps (right-click the clinic), or have the doctor press **Use my current location** in the portal under **Profile, link & QR** while standing in the clinic.
+4. The doctor signs in and downloads their QR code from **Profile, link & QR**.
+
+## How patients start
+
+- **Registration comes first.** The app opens on a welcome screen and stays locked until the patient registers with their name, gender, date of birth, optional email and consent, plus their phone number verified by a WhatsApp code. On the website, browsing is open, but booking requires registration. Someone who first booked on WhatsApp signs in and fills in only the missing details.
+- **Nearby doctors first.** The website and the app ask for the patient's location when the doctor list opens. Doctors are sorted nearest first, with the distance shown, and can be filtered by distance (3, 5 or 10 km). If location is refused, the full list shows with an option to turn location on or pick an area. On WhatsApp, "Find a doctor" asks the patient to share their location and replies with the nearest doctors.
+- The patient's location is used only to sort the list. It is not stored on the server, except the last shared WhatsApp location, which is kept in that chat's state to sort the next search.
 
 ## Going live on WhatsApp
 
@@ -85,7 +118,7 @@ While `WHATSAPP_TOKEN` is empty, nothing is sent to Meta. Every message is store
 ## Tests
 
 ```bash
-cd backend && venv\Scripts\python manage.py test   # 28 tests
+cd backend && venv\Scripts\python manage.py test   # 39 tests
 cd web && npx tsc --noEmit && npx eslint src && npm run build
 cd mobile && npx tsc --noEmit && npx eslint src
 ```

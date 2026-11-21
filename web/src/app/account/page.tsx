@@ -4,7 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { profileErrors, ProfileFields, type ProfileValues } from "@/components/profile-fields";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { RequireAuth } from "@/components/require-auth";
+import { useToast } from "@/components/toast";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { Avatar, Button, Empty, ErrorNote, Field, Spinner } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
@@ -20,9 +22,13 @@ function YourDetails() {
     email: user?.email || "",
     consent: true,
   }));
+  const toast = useToast();
   const save = useMutation({
     mutationFn: () => api("/auth/me/", { method: "PATCH", body: v }),
-    onSuccess: () => refreshUser(),
+    onSuccess: () => {
+      refreshUser();
+      toast.success("Your details are saved.");
+    },
   });
   const err = save.error instanceof ApiError ? save.error : null;
   return (
@@ -40,7 +46,6 @@ function YourDetails() {
         <Button variant="primary" type="submit" loading={save.isPending} disabled={!!profileErrors(v)}>
           Save details
         </Button>
-        {save.isSuccess && <span className="text-sm font-semibold text-emerald-700">Saved.</span>}
       </div>
     </form>
   );
@@ -53,17 +58,24 @@ function Family() {
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [relation, setRelation] = useState("family");
+  const toast = useToast();
+  const [removing, setRemoving] = useState<Patient | null>(null);
   const add = useMutation({
     mutationFn: () => api<Patient>("/me/patients/", { method: "POST", body: { name, age: Number(age), relation } }),
     onSuccess: () => {
+      toast.success(`${name} added to your family.`);
       setName("");
       setAge("");
       qc.invalidateQueries({ queryKey: ["patients"] });
     },
   });
   const remove = useMutation({
-    mutationFn: (id: number) => api(`/me/patients/${id}/`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["patients"] }),
+    mutationFn: (p: Patient) => api(`/me/patients/${p.id}/`, { method: "DELETE" }),
+    onSuccess: (_r, p) => {
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      setRemoving(null);
+      toast.success(`${p.name} was removed.`);
+    },
   });
 
   return (
@@ -88,7 +100,7 @@ function Family() {
                 </p>
               </div>
               {p.relation !== "self" && (
-                <Button size="sm" variant="ghost" onClick={() => remove.mutate(p.id)}>
+                <Button size="sm" variant="ghost" onClick={() => setRemoving(p)}>
                   Remove
                 </Button>
               )}
@@ -100,7 +112,18 @@ function Family() {
           <p className="text-sm text-muted">Your first booking adds you automatically.</p>
         </Empty>
       )}
-      <ErrorNote>{remove.error?.message}</ErrorNote>
+      {removing && (
+        <ConfirmDialog
+          title={`Remove ${removing.name}?`}
+          confirmLabel="Remove"
+          loading={remove.isPending}
+          error={remove.error?.message}
+          onClose={() => (setRemoving(null), remove.reset())}
+          onConfirm={() => remove.mutate(removing)}
+        >
+          <p>They&apos;ll no longer appear when you book. You can add them again later.</p>
+        </ConfirmDialog>
+      )}
       <form
         className="card grid gap-4 p-5"
         onSubmit={(e) => {

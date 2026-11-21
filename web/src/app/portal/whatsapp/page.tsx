@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePortal } from "@/components/portal";
 import { ErrorNote, Field, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
+import { fmtDateTime } from "@/lib/format";
 
 type Payload = {
   type?: string;
@@ -41,10 +42,10 @@ function fmt(s: string) {
 }
 
 function Bubble({ m, onTap, onList, onLocation }: { m: Msg; onTap: (id: string, title: string) => void; onList: (m: Msg) => void; onLocation: () => void }) {
-  const time = new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const time = fmtDateTime(m.created_at);
   if (m.direction === "in")
     return (
-      <div className="max-w-[85%] self-end rounded-xl rounded-tr-sm bg-emerald-100 px-3 py-1.5 text-sm shadow-sm">
+      <div className="max-w-[85%] self-end rounded-xl rounded-tr-sm bg-accent-soft px-3 py-1.5 text-sm shadow-sm">
         <span dangerouslySetInnerHTML={{ __html: fmt(m.summary || "") }} />
         <span className="ml-2 text-[10px] text-muted">{time}</span>
       </div>
@@ -76,22 +77,22 @@ function Bubble({ m, onTap, onList, onLocation }: { m: Msg; onTap: (id: string, 
         </p>
       </div>
       {buttons.map((b) => (
-        <button key={b.id} onClick={() => onTap(b.id, b.title)} className="flex w-full items-center justify-center gap-1.5 border-t border-line px-3 py-2 font-semibold text-teal-700 hover:bg-canvas">
+        <button key={b.id} onClick={() => onTap(b.id, b.title)} className="flex w-full items-center justify-center gap-1.5 border-t border-line px-3 py-2 font-semibold text-brand hover:bg-canvas">
           <Reply className="size-3.5" aria-hidden /> {b.title}
         </button>
       ))}
       {i?.type === "list" && (
-        <button onClick={() => onList(m)} className="flex w-full items-center justify-center gap-1.5 border-t border-line px-3 py-2 font-semibold text-teal-700 hover:bg-canvas">
+        <button onClick={() => onList(m)} className="flex w-full items-center justify-center gap-1.5 border-t border-line px-3 py-2 font-semibold text-brand hover:bg-canvas">
           <List className="size-3.5" aria-hidden /> {i.action.button}
         </button>
       )}
       {i?.type === "location_request_message" && (
-        <button onClick={onLocation} className="flex w-full items-center justify-center gap-1.5 border-t border-line px-3 py-2 font-semibold text-teal-700 hover:bg-canvas">
+        <button onClick={onLocation} className="flex w-full items-center justify-center gap-1.5 border-t border-line px-3 py-2 font-semibold text-brand hover:bg-canvas">
           <MapPin className="size-3.5" aria-hidden /> Send location
         </button>
       )}
       {i?.type === "cta_url" && (
-        <a href={i.action.parameters!.url} target="_blank" rel="noopener" className="flex items-center justify-center gap-1.5 border-t border-line px-3 py-2 font-semibold text-teal-700 hover:bg-canvas">
+        <a href={i.action.parameters!.url} target="_blank" rel="noopener" className="flex items-center justify-center gap-1.5 border-t border-line px-3 py-2 font-semibold text-brand hover:bg-canvas">
           <ExternalLink className="size-3.5" aria-hidden /> {i.action.parameters!.display_text}
         </a>
       )}
@@ -128,9 +129,9 @@ export default function WhatsAppTesterPage() {
 
   return (
     <>
-      <div>
-        <p className="label">WhatsApp tester</p>
-        <h1 className="text-2xl font-extrabold">Chat with the bot as any phone number</h1>
+      <div className="grid gap-1 border-b border-line pb-5">
+        <p className="label">Doctor tools</p>
+        <h1 className="text-2xl font-extrabold sm:text-[28px]">WhatsApp tester</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
           This runs the real bot, bookings and all, without sending anything to WhatsApp. Use a doctor&apos;s registered phone to try doctor commands
           (sample doctors: 919800000001 to 919800000004). It works only while the server has no WhatsApp token.
@@ -154,8 +155,8 @@ export default function WhatsAppTesterPage() {
             ))}
           </div>
         </div>
-        <div className="relative flex h-[38rem] flex-col overflow-hidden rounded-3xl border-8 border-ink bg-[#e4ece9]">
-          <div className="bg-[#0e5f53] px-4 py-3 text-white">
+        <div className="relative flex h-[38rem] flex-col overflow-hidden rounded-3xl border-8 border-ink bg-[#e8eff7]">
+          <div className="bg-accent-dark px-4 py-3 text-white">
             <p className="font-semibold">CareSlot Bookings</p>
             <p className="text-xs opacity-80">{send.isPending ? "typing…" : `+${phone}`}</p>
           </div>
@@ -190,7 +191,7 @@ export default function WhatsAppTesterPage() {
                 </div>
                 {sheet.payload.interactive.action.sections?.map((s) => (
                   <div key={s.title}>
-                    <p className="px-4 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-teal-700">{s.title}</p>
+                    <p className="px-4 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-brand">{s.title}</p>
                     {s.rows.map((r) => (
                       <button
                         key={r.id}

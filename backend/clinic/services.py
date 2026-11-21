@@ -72,7 +72,8 @@ def fmt_time(t: Time) -> str:
 
 
 def fmt_date(d: Date) -> str:
-    return f"{d:%a} {d.day} {d:%b}"
+    """All dates shown to people are dd/mm/yyyy."""
+    return d.strftime("%d/%m/%Y")
 
 
 def rel_date(d: Date) -> str:
@@ -84,11 +85,15 @@ def rel_date(d: Date) -> str:
     return fmt_date(d)
 
 
-def when_text(d: Date, t: Time) -> str:
-    """'Tomorrow (Sat 21 Nov), 5:30 PM' or 'Mon 23 Nov, 5:30 PM'."""
+def day_label(d: Date) -> str:
+    """'Today (21/11/2026)', 'Tomorrow (22/11/2026)' or 'Mon 23/11/2026'."""
     r = rel_date(d)
-    day = f"{r} ({fmt_date(d)})" if r in ("Today", "Tomorrow") else r
-    return f"{day}, {fmt_time(t)}"
+    return f"{r} ({fmt_date(d)})" if r in ("Today", "Tomorrow") else f"{d:%a} {fmt_date(d)}"
+
+
+def when_text(d: Date, t: Time) -> str:
+    """'Tomorrow (22/11/2026), 5:30 PM' or 'Mon 23/11/2026, 5:30 PM'."""
+    return f"{day_label(d)}, {fmt_time(t)}"
 
 
 # --------------------------------------------------------------------------
@@ -163,12 +168,23 @@ def day_overview(doctor: Doctor, days: list[Date] | None = None) -> list[dict]:
             "date": d.isoformat(),
             "label": rel_date(d),
             "short": fmt_date(d),
+            "weekday": d.strftime("%a"),
             "on_leave": leave,
             "closed": not has_hours,
             "free": len(free),
             "first_free": free[0].strftime("%H:%M") if free else None,
         })
     return out
+
+
+def next_slots(doctor: Doctor, count: int = 4) -> dict | None:
+    """The first day with free times and its first few times, for one-click booking."""
+    for d in booking_days():
+        f = free_slots(doctor, d)
+        if f:
+            return {"date": d.isoformat(), "label": day_label(d),
+                    "times": [{"time": t.strftime("%H:%M"), "label": fmt_time(t)} for t in f[:count]]}
+    return None
 
 
 def next_available(doctor: Doctor) -> dict | None:

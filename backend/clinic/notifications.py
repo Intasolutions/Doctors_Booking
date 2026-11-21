@@ -12,7 +12,7 @@ from whatsapp import client as wa
 from whatsapp.models import Conversation
 
 from .models import Appointment, Doctor
-from .services import day_summary, fmt_time, rel_date, today, when_text
+from .services import day_summary, fmt_time, today, when_text
 
 log = logging.getLogger("careslot")
 
@@ -199,12 +199,12 @@ def appointment_booked(a: Appointment):
 def appointment_rescheduled(a: Appointment, source: str = ""):
     if source != Appointment.Source.WHATSAPP:
         patient_confirmation(a, rescheduled=True)
-    doctor_booking_changed(a, f"was moved to {rel_date(a.date)}, {fmt_time(a.start)}")
+    doctor_booking_changed(a, f"was moved to {when_text(a.date, a.start)}")
 
 
 def appointment_cancelled(a: Appointment, source: str = ""):
     if a.cancelled_by == "patient":
-        doctor_booking_changed(a, f"was cancelled by the patient. The {fmt_time(a.start)} slot on {rel_date(a.date)} is open again")
+        doctor_booking_changed(a, f"was cancelled by the patient. The slot on {when_text(a.date, a.start)} is open again")
         if source != Appointment.Source.WHATSAPP:
             patient_cancelled(a)
     else:

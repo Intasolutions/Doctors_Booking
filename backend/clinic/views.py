@@ -108,7 +108,7 @@ class MyPatientsViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
-        return Patient.objects.filter(account=self.request.user).order_by("id")
+        return Patient.objects.filter(account=self.request.user, removed_at__isnull=True).order_by("id")
 
     def perform_create(self, serializer):
         has_self = Patient.objects.filter(account=self.request.user).exists()
@@ -116,10 +116,17 @@ class MyPatientsViewSet(viewsets.ModelViewSet):
                         relation=serializer.validated_data.get("relation") or ("self" if not has_self else "family"))
 
     def destroy(self, request, *args, **kwargs):
+        """Soft delete: hidden from the account, past visits keep their name."""
+        from django.utils import timezone
+
         p = self.get_object()
-        if p.appointments.exists():
-            return Response({"detail": "This person has bookings, so they can't be removed."}, status=400)
-        return super().destroy(request, *args, **kwargs)
+        if p.relation == "self":
+            return Response({"detail": "You can't remove yourself. Edit your details instead."}, status=400)
+        if p.appointments.filter(status="confirmed", date__gte=S.today()).exists():
+            return Response({"detail": f"{p.name} has an upcoming visit. Cancel it first, then remove them."}, status=400)
+        p.removed_at = timezone.now()
+        p.save(update_fields=["removed_at"])
+        return Response(status=204)
 
 
 class MyAppointmentsViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -137,7 +144,7 @@ class MyAppointmentsViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, vi
         d = s.validated_data
         user = request.user
         if d.get("patient_id"):
-            patient = get_object_or_404(Patient.objects.filter(Q(account=user) | Q(phone=user.phone or "-")), pk=d["patient_id"])
+            patient = get_object_or_404(Patient.objects.filter(Q(account=user) | Q(phone=user.phone or "-"), removed_at__isnull=True), pk=d["patient_id"])
         else:
             np = d["patient"]
             has_self = Patient.objects.filter(account=user).exists()
@@ -339,15 +346,3 @@ class DoctorLeaveDeleteView(DoctorScoped):
     def delete(self, request, pk):
         get_object_or_404(Leave, pk=pk, doctor=self.doctor()).delete()
         return Response(status=204)
-
-
-class AdminDoctorsView(APIView):
-    """Doctor list for admins choosing which portal to open."""
-
-    permission_classes = [IsDoctorOrAdmin]
-
-    def get(self, request):
-        if request.user.role != "admin":
-            raise PermissionDenied()
-        return Response([{"slug": d.slug, "name": d.name, "specialty": d.specialty, "is_active": d.is_active}
-                         for d in Doctor.objects.select_related("user")])

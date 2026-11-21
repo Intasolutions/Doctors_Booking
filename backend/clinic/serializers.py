@@ -13,12 +13,16 @@ class DoctorPublicSerializer(serializers.ModelSerializer):
     next_available = serializers.SerializerMethodField()
     hours = serializers.SerializerMethodField()
     distance_km = serializers.SerializerMethodField()
+    next_slots = serializers.SerializerMethodField()
 
     class Meta:
         model = Doctor
         fields = ["slug", "code", "name", "specialty", "qualifications", "experience_years", "about", "languages",
                   "area", "city", "address", "directions_url", "latitude", "longitude", "fee", "slot_minutes",
-                  "whatsapp_link", "next_available", "hours", "distance_km"]
+                  "whatsapp_link", "next_available", "next_slots", "hours", "distance_km"]
+
+    def get_next_slots(self, d):
+        return S.next_slots(d)
 
     def get_distance_km(self, d):
         km = self.context.get("distances", {}).get(d.id)

@@ -1,14 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #f2f6f6;
+  /* Blue for actions and navigation, green for good news (free slots, nearby, confirmed). */
+  --color-canvas: #f3f7fb;
   --color-surface: #ffffff;
-  --color-ink: #0f2329;
-  --color-muted: #566b70;
-  --color-line: #d7e2e3;
-  --color-brand: #0c7a69;
-  --color-brand-dark: #075a4d;
-  --color-brand-soft: #daf0ea;
+  --color-ink: #0e2236;
+  --color-muted: #55687c;
+  --color-line: #d9e3ed;
+  --color-brand: #1b64da;
+  --color-brand-dark: #144ca8;
+  --color-brand-soft: #e7effd;
+  --color-accent: #16a06b;
+  --color-accent-dark: #0b6b47;
+  --color-accent-soft: #e3f5ec;
   --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: var(--font-manrope), var(--font-inter), system-ui, sans-serif;
 }
@@ -26,16 +30,19 @@ h3 {
   text-wrap: balance;
 }
 
-.input {
-  @apply w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25 disabled:opacity-60;
-}
+/* In the components layer so utilities on an element (pl-9, w-32, …) can override these. */
+@layer components {
+  .input {
+    @apply w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25 disabled:opacity-60;
+  }
 
-.label {
-  @apply text-[11px] font-bold uppercase tracking-[0.1em] text-muted;
-}
+  .label {
+    @apply text-[11px] font-bold uppercase tracking-[0.1em] text-muted;
+  }
 
-.card {
-  @apply rounded-2xl border border-line bg-surface;
+  .card {
+    @apply rounded-2xl border border-line bg-surface;
+  }
 }
 
 .tabular {

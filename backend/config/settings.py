@@ -115,6 +115,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "en-us"
+# dd/mm/yyyy dates and 12-hour times in the admin (see config/formats/en).
+FORMAT_MODULE_PATH = "config.formats"
 TIME_ZONE = "Asia/Kolkata"
 USE_I18N = True
 USE_TZ = True
@@ -151,6 +153,9 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
+# Local testing from phones on the same Wi-Fi, whose address can change.
+# Only ever honoured with DEBUG on.
+CORS_ALLOW_ALL_ORIGINS = DEBUG and env_bool("CORS_ALLOW_ALL", False)
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")
 
 if not DEBUG and not RUNNING_TESTS:

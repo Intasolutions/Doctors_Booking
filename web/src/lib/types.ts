@@ -44,6 +44,7 @@ export type Doctor = {
   slot_minutes: number;
   whatsapp_link: string;
   next_available: { date: string; time: string; label: string } | null;
+  next_slots: { date: string; label: string; times: { time: string; label: string }[] } | null;
   hours: { day: string; sessions: string[] }[];
   is_active?: boolean;
   notify_whatsapp?: boolean;

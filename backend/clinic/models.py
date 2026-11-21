@@ -29,6 +29,9 @@ class Doctor(models.Model):
     slot_minutes = models.PositiveSmallIntegerField(default=15)
     is_active = models.BooleanField(default=True)
     notify_whatsapp = models.BooleanField(default=True, help_text="Send booking alerts to the doctor's WhatsApp")
+    # Set when an admin deletes a doctor who has booking history: the doctor
+    # disappears everywhere but past visits keep their records.
+    archived_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -83,7 +86,7 @@ class Session(models.Model):
         constraints = [models.CheckConstraint(condition=Q(end__gt=models.F("start")), name="session_end_after_start")]
 
     def __str__(self):
-        return f"{self.get_weekday_display()} {self.start:%H:%M}-{self.end:%H:%M}"
+        return f"{self.get_weekday_display()} {self.start:%I:%M %p}-{self.end:%I:%M %p}".replace(" 0", " ")
 
 
 class TimeBlock(models.Model):
@@ -124,6 +127,8 @@ class Patient(models.Model):
     # WhatsApp number that receives confirmations. Empty for some walk-ins.
     phone = models.CharField(max_length=15, blank=True, db_index=True)
     consent_at = models.DateTimeField(null=True, blank=True, help_text="When the patient agreed to data use (DPDP)")
+    # Soft delete: a removed family member is hidden, but their past visits keep their name.
+    removed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -199,7 +204,7 @@ class Appointment(models.Model):
         indexes = [models.Index(fields=["doctor", "date"])]
 
     def __str__(self):
-        return f"{self.code} {self.patient} with {self.doctor} on {self.date} {self.start:%H:%M}"
+        return f"{self.code} {self.patient} with {self.doctor} on {self.date:%d/%m/%Y} {self.start:%I:%M %p}"
 
     @property
     def is_active(self):

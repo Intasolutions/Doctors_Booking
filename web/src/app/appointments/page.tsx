@@ -7,31 +7,35 @@ import { useState } from "react";
 
 import { RequireAuth } from "@/components/require-auth";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
-import { Button, Empty, ErrorNote, Spinner, StatusPill } from "@/components/ui";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { useToast } from "@/components/toast";
+import { Button, Empty, ErrorNote, SkeletonList, StatusPill } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { dayParts } from "@/lib/format";
+import { fmtDate, fmtTime, weekday } from "@/lib/format";
 import type { Appointment } from "@/lib/types";
 
 function Row({ a }: { a: Appointment }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const [confirming, setConfirming] = useState(false);
   const cancel = useMutation({
     mutationFn: () => api<Appointment>(`/me/appointments/${a.code}/cancel/`, { method: "POST", body: { source: "web" } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      setConfirming(false);
+      toast.success(`Your visit with ${a.doctor.name} is cancelled. The doctor has been told.`);
+    },
   });
-  const p = dayParts(a.date);
   return (
     <div className={`card grid grid-cols-[auto_minmax(0,1fr)] items-center gap-4 p-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] ${a.upcoming ? "" : "opacity-75"}`}>
-      <div className="min-w-17 rounded-xl bg-canvas p-2 text-center">
-        <b className="block font-display text-xl leading-tight">{p.day}</b>
-        <span className="text-xs text-muted">
-          {p.month} · {p.weekday}
-        </span>
+      <div className="min-w-24 rounded-xl bg-canvas p-2 text-center">
+        <b className="block font-display text-lg leading-tight">{weekday(a.date)}</b>
+        <span className="tabular text-xs text-muted">{fmtDate(a.date)}</span>
       </div>
       <div className="min-w-0">
         <p className="font-semibold">
-          {a.when.split(", ").slice(-1)[0]} · {a.doctor.name}
+          {fmtTime(a.time)} · {a.doctor.name}
         </p>
         <p className="text-[13px] text-muted">
           {a.doctor.specialty} · {a.doctor.area} · for {a.patient.name}
@@ -44,17 +48,7 @@ function Row({ a }: { a: Appointment }) {
       </div>
       {a.upcoming && (
         <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-1">
-          {confirming ? (
-            <>
-              <span className="self-center text-[13px] font-semibold text-red-700">Cancel this visit?</span>
-              <Button size="sm" variant="danger" loading={cancel.isPending} onClick={() => cancel.mutate()}>
-                Yes, cancel
-              </Button>
-              <Button size="sm" onClick={() => setConfirming(false)}>
-                Keep
-              </Button>
-            </>
-          ) : (
+          {(
             <>
               <a href={a.doctor.directions_url} target="_blank" rel="noopener" className="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-[13px] font-semibold hover:border-muted">
                 <MapPin className="size-3.5" aria-hidden /> Directions
@@ -69,10 +63,20 @@ function Row({ a }: { a: Appointment }) {
           )}
         </div>
       )}
-      {cancel.error && (
-        <div className="col-span-full">
-          <ErrorNote>{cancel.error.message}</ErrorNote>
-        </div>
+      {confirming && (
+        <ConfirmDialog
+          title="Cancel this visit?"
+          confirmLabel="Cancel visit"
+          loading={cancel.isPending}
+          error={cancel.error?.message}
+          onClose={() => (setConfirming(false), cancel.reset())}
+          onConfirm={() => cancel.mutate()}
+        >
+          <p>
+            <b>{a.doctor.name}</b>, {a.when}, for {a.patient.name}.
+          </p>
+          <p>The doctor is told, and the time opens up for other patients. You can book a new time whenever you like.</p>
+        </ConfirmDialog>
       )}
     </div>
   );
@@ -81,7 +85,7 @@ function Row({ a }: { a: Appointment }) {
 function List() {
   const { user } = useAuth();
   const q = useQuery({ queryKey: ["appointments"], queryFn: () => api<Appointment[]>("/me/appointments/") });
-  if (q.isLoading) return <Spinner />;
+  if (q.isLoading) return <SkeletonList rows={3} />;
   if (q.isError) return <ErrorNote>{q.error.message}</ErrorNote>;
   const all = q.data || [];
   const upcoming = all.filter((a) => a.upcoming).reverse();

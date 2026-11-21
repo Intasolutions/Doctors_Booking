@@ -1,6 +1,16 @@
 "use client";
 
-export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000/api").replace(/\/$/, "");
+/**
+ * The API address. Production builds set NEXT_PUBLIC_API_BASE_URL. In local
+ * development it follows the address the site was opened on, so the same dev
+ * server works at localhost on this PC and at 192.168.x.x from a phone.
+ */
+export function apiBase() {
+  const fixed = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (fixed) return fixed.replace(/\/$/, "");
+  const host = typeof window === "undefined" ? "127.0.0.1" : window.location.hostname;
+  return `http://${host}:8000/api`;
+}
 
 const ACCESS = "careslot.access";
 const REFRESH = "careslot.refresh";
@@ -66,7 +76,7 @@ async function refreshAccess(): Promise<boolean> {
   const refresh = read(REFRESH);
   if (!refresh) return false;
   try {
-    const r = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+    const r = await fetch(`${apiBase()}/auth/refresh/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh }),
@@ -83,7 +93,7 @@ async function refreshAccess(): Promise<boolean> {
 type Options = { method?: string; body?: unknown; auth?: boolean; params?: Record<string, string | undefined> };
 
 export async function api<T = unknown>(path: string, opts: Options = {}, retried = false): Promise<T> {
-  const url = new URL(`${API_BASE_URL}${path}`);
+  const url = new URL(`${apiBase()}${path}`);
   for (const [k, v] of Object.entries(opts.params || {})) if (v) url.searchParams.set(k, v);
   const headers: Record<string, string> = { Accept: "application/json" };
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";

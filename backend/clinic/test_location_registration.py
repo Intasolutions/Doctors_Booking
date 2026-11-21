@@ -128,3 +128,24 @@ class RegistrationTests(TestCase):
         self.api.credentials(HTTP_AUTHORIZATION=f"Bearer {r.data['access']}")
         r = self.api.patch("/api/auth/me/", self.profile, format="json")
         self.assertTrue(r.data["profile_complete"])
+
+
+class FamilySoftDeleteTests(TestCase):
+    def test_removed_member_hidden_but_kept(self):
+        from clinic import services as S
+        from clinic.models import Patient
+
+        d = make_doctor()
+        u = S.ensure_patient_account(PHONE, "Arjun")
+        me = Patient.objects.create(account=u, name="Arjun", phone=PHONE, relation="self")
+        kid = Patient.objects.create(account=u, name="Meera", phone=PHONE, relation="daughter")
+        past = S.book(doctor=d, patient=kid, day=S.today() + timedelta(days=1), start="17:00", source="web", notify=False)
+        api = APIClient()
+        api.force_authenticate(u)
+        self.assertEqual(api.delete(f"/api/me/patients/{me.id}/").status_code, 400)  # can't remove yourself
+        self.assertEqual(api.delete(f"/api/me/patients/{kid.id}/").status_code, 400)  # upcoming visit
+        S.cancel(past, by="patient", notify=False)
+        self.assertEqual(api.delete(f"/api/me/patients/{kid.id}/").status_code, 204)
+        self.assertEqual([p["name"] for p in api.get("/api/me/patients/").data], ["Arjun"])
+        kid.refresh_from_db()
+        self.assertIsNotNone(kid.removed_at)  # still in the database
