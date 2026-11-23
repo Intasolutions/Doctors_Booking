@@ -45,6 +45,13 @@ def handle_incoming(phone: str, *, text: str = "", reply_id: str = "", reply_tit
                  **({"location": {"latitude": location[0], "longitude": location[1]}} if location else {})},
         wa_id=wa_id, status="received",
     )
+    # A login an admin switched off can't book or run doctor commands here either.
+    from accounts.models import User
+
+    if User.objects.filter(phone=phone, is_active=False).exists():
+        wa.send_text(phone, f"This number's {settings.CARESLOT['BRAND']} account is switched off, so it can't be used "
+                            "for bookings. Please contact the clinic if you think this is a mistake.")
+        return
     doctor = Doctor.objects.filter(user__phone=phone, is_active=True).select_related("user").first()
     bot = DoctorBot(conv, doctor) if doctor else PatientBot(conv)
     try:

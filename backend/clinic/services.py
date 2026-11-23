@@ -100,15 +100,51 @@ def when_text(d: Date, t: Time) -> str:
 # slot engine
 # --------------------------------------------------------------------------
 
-def slot_times(doctor: Doctor, day: Date) -> list[Time]:
+def grid_times(spans, step: int) -> list[Time]:
+    """Start times of every slot of `step` minutes inside the (start, end) spans."""
+    if not step or step < 1:
+        # Guard: a zero slot length would loop forever and hang every page.
+        log.error("Slot length %r is invalid; no slots generated", step)
+        return []
     out = []
-    step = doctor.slot_minutes
-    for s in doctor.sessions.filter(weekday=day.weekday()):
-        m, end = to_minutes(s.start), to_minutes(s.end)
-        while m + step <= end:
+    for start, end in spans:
+        m, stop = to_minutes(start), to_minutes(end)
+        while m + step <= stop:
             out.append(from_minutes(m))
             m += step
     return sorted(set(out))
+
+
+def slot_times(doctor: Doctor, day: Date) -> list[Time]:
+    return grid_times([(s.start, s.end) for s in doctor.sessions.filter(weekday=day.weekday())], doctor.slot_minutes)
+
+
+def schedule_conflicts(doctor: Doctor, sessions: list[dict] | None = None, slot_minutes: int | None = None) -> list[Appointment]:
+    """Upcoming confirmed bookings that would fall outside the slots of a new
+    schedule (new hours and/or a new time per patient). Either argument left
+    as None keeps the doctor's current value."""
+    step = slot_minutes or doctor.slot_minutes
+    if sessions is None:
+        spans = {}
+        for s in doctor.sessions.all():
+            spans.setdefault(s.weekday, []).append((s.start, s.end))
+    else:
+        spans = {}
+        for s in sessions:
+            spans.setdefault(s["weekday"], []).append((parse_time(s["start"]), parse_time(s["end"])))
+    n = now()
+    grid = {wd: set(grid_times(spans.get(wd, []), step)) for wd in range(7)}
+    upcoming = (Appointment.objects.filter(doctor=doctor, status=A.Status.CONFIRMED, date__gte=n.date())
+                .select_related("patient", "doctor__user").order_by("date", "start"))
+    return [a for a in upcoming
+            if (a.date > n.date() or a.start >= n.time().replace(second=0, microsecond=0))
+            and a.start not in grid[a.date.weekday()]]
+
+
+def cancel_for_schedule_change(affected: list[Appointment]) -> list[Appointment]:
+    for a in affected:
+        cancel(a, by="doctor", reason="The doctor's consultation hours changed")
+    return affected
 
 
 def is_on_leave(doctor: Doctor, day: Date) -> bool:
@@ -219,6 +255,13 @@ def _check_bookable(doctor: Doctor, day: Date, start: Time, *, allow_past=False,
         taken = Appointment.objects.filter(doctor=doctor, date=day, start=start).exclude(status=A.Status.CANCELLED)
         if ignore is None or taken.exclude(pk=ignore.pk).exists():
             raise BookingError("Sorry, that slot was just booked by someone else. Please pick another time.")
+
+
+def check_reopen(appt: Appointment):
+    """A cancelled visit can come back only if its time is still bookable: the
+    doctor takes bookings, works then, isn't on leave or blocked, and nobody
+    else has the slot. Past dates are allowed (closing an old visit)."""
+    _check_bookable(appt.doctor, appt.date, appt.start, allow_past=True, ignore=appt)
 
 
 def book(*, doctor: Doctor, patient: Patient, day, start, source: str, reason: str = "", notify=True) -> Appointment:

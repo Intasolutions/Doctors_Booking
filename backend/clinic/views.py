@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import mixins, status, viewsets
@@ -295,14 +296,40 @@ class DoctorScheduleView(DoctorScoped):
                          "sessions": SessionItemSerializer(d.sessions.all(), many=True).data})
 
     def put(self, request):
+        """Replace the weekly hours. Bookings the new hours would leave out are
+        cancelled (patients told on WhatsApp) only when the request says
+        cancel_affected=true; otherwise they are listed back with a 409."""
         d = self.doctor()
         s = ScheduleSerializer(data=request.data)
         s.is_valid(raise_exception=True)
-        d.slot_minutes = s.validated_data["slot_minutes"]
-        d.save(update_fields=["slot_minutes"])
-        d.sessions.all().delete()
-        Session.objects.bulk_create([Session(doctor=d, **x) for x in s.validated_data["sessions"]])
-        return self.get(request)
+        v = s.validated_data
+        affected = S.schedule_conflicts(d, v["sessions"], v["slot_minutes"])
+        if affected and not schedule_change_confirmed(request):
+            return schedule_conflict_response(affected)
+        with transaction.atomic():
+            d.slot_minutes = v["slot_minutes"]
+            d.save(update_fields=["slot_minutes"])
+            d.sessions.all().delete()
+            Session.objects.bulk_create([Session(doctor=d, **x) for x in v["sessions"]])
+            S.cancel_for_schedule_change(affected)
+        data = self.get(request).data
+        return Response({**data, "cancelled": [a.code for a in affected]})
+
+
+def schedule_change_confirmed(request) -> bool:
+    flag = request.data.get("cancel_affected") if isinstance(request.data, dict) else None
+    return flag is True or str(flag).lower() in ("1", "true")
+
+
+def schedule_conflict_response(affected: list[Appointment]) -> Response:
+    n = len(affected)
+    return Response({
+        "detail": f"{n} booked patient{'s' if n > 1 else ''} would fall outside the new times. "
+                  f"Confirm to cancel {'them' if n > 1 else 'it'} (patients are told on WhatsApp), or keep the old hours.",
+        "code": "bookings_affected",
+        "affected": [{"code": a.code, "date": a.date.isoformat(), "time": a.start.strftime("%H:%M"),
+                      "when": S.when_text(a.date, a.start), "patient": a.patient.name} for a in affected],
+    }, status=status.HTTP_409_CONFLICT)
 
 
 class DoctorBlocksView(DoctorScoped):

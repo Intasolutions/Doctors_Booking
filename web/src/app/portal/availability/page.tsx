@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { DateInput, TimeSelect } from "@/components/date-time-inputs";
 import { PageHeader } from "@/components/page-header";
 import { usePortal } from "@/components/portal";
+import { affectedFrom, type AffectedBooking, ScheduleConflictDialog } from "@/components/schedule-conflict";
 import { useToast } from "@/components/toast";
 import { Button, ErrorNote, Field, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -39,19 +40,34 @@ function HoursForm({ initial }: { initial: Schedule }) {
   });
   const [slot, setSlot] = useState(initial.slot_minutes);
   const toast = useToast();
+  // Booked patients the new hours would leave out, waiting for the doctor's OK.
+  const [affected, setAffected] = useState<AffectedBooking[] | null>(null);
 
   const save = useMutation({
-    mutationFn: () =>
-      api<Schedule>("/doctor/schedule/", {
+    mutationFn: (cancelAffected: boolean) =>
+      api<Schedule & { cancelled?: string[] }>("/doctor/schedule/", {
         method: "PUT",
         params,
-        body: { slot_minutes: slot, sessions: days.flatMap((spans, weekday) => spans.map((s) => ({ weekday, ...s }))) },
+        body: {
+          slot_minutes: slot,
+          sessions: days.flatMap((spans, weekday) => spans.map((s) => ({ weekday, ...s }))),
+          ...(cancelAffected ? { cancel_affected: true } : {}),
+        },
       }),
-    onSuccess: () => {
-      toast.success("Hours saved. Patients see the new times now.");
+    onSuccess: (r) => {
+      setAffected(null);
+      const n = r.cancelled?.length ?? 0;
+      toast.success(
+        n ? `Hours saved. ${n} booking${n > 1 ? "s were" : " was"} cancelled and the patient${n > 1 ? "s were" : " was"} told on WhatsApp.` : "Hours saved. Patients see the new times now.",
+      );
       qc.invalidateQueries({ queryKey: ["doctor-day", slug] });
     },
+    onError: (e) => {
+      const list = affectedFrom(e);
+      if (list) setAffected(list);
+    },
   });
+  const conflict = !!affectedFrom(save.error);
 
   const update = (i: number, fn: (s: Span[]) => Span[]) => {
     setDays((d) => d.map((x, j) => (j === i ? fn(x) : x)));
@@ -61,7 +77,9 @@ function HoursForm({ initial }: { initial: Schedule }) {
     <div className="card grid gap-4 p-5">
       <div>
         <h2 className="text-lg font-bold">Weekly consultation hours</h2>
-        <p className="text-sm text-muted">Patients can book only inside these hours. Existing bookings stay as they are.</p>
+        <p className="text-sm text-muted">
+          Patients can book only inside these hours. If a change leaves out booked patients, you&apos;ll see who before anything is cancelled.
+        </p>
       </div>
       <div className="grid gap-2">
         {WEEKDAYS.map((name, i) => (
@@ -95,12 +113,21 @@ function HoursForm({ initial }: { initial: Schedule }) {
           ))}
         </select>
       </Field>
-      <ErrorNote>{save.error?.message}</ErrorNote>
+      <ErrorNote>{affected || conflict ? "" : save.error?.message}</ErrorNote>
       <div className="flex items-center gap-3">
-        <Button variant="primary" loading={save.isPending} onClick={() => save.mutate()}>
+        <Button variant="primary" loading={save.isPending && !affected} onClick={() => save.mutate(false)}>
           Save hours
         </Button>
       </div>
+      {affected && (
+        <ScheduleConflictDialog
+          affected={affected}
+          loading={save.isPending}
+          error={save.error && !conflict ? save.error.message : ""}
+          onConfirm={() => save.mutate(true)}
+          onClose={() => (setAffected(null), save.reset())}
+        />
+      )}
     </div>
   );
 }

@@ -137,6 +137,30 @@ class DoctorBotTests(TestCase):
         self.assertIn("Commands you can send", self.cmd("blah").summary)
 
 
+class DisabledAccountTests(TestCase):
+    def setUp(self):
+        self.d = make_doctor()
+
+    def outs(self, phone):
+        return MessageLog.objects.filter(phone=phone, direction="out")
+
+    def test_disabled_patient_cannot_book(self):
+        from accounts.models import User
+
+        User.objects.create_user(PHONE, phone=PHONE, role="patient", is_active=False)
+        handle_incoming(PHONE, text=self.d.code)
+        handle_incoming(PHONE, reply_id="book", reply_title="Book")
+        self.assertEqual(self.outs(PHONE).count(), 2)
+        self.assertTrue(all("switched off" in m.summary for m in self.outs(PHONE)))
+
+    def test_disabled_doctor_login_cannot_run_commands(self):
+        self.d.user.is_active = False
+        self.d.user.save()
+        handle_incoming(self.d.user.phone, text="block 7pm-8pm")
+        self.assertIn("switched off", self.outs(self.d.user.phone).latest("id").summary)
+        self.assertFalse(self.d.blocks.exists())
+
+
 @override_settings(WHATSAPP={**settings.WHATSAPP, "APP_SECRET": "s3cret"})
 class WebhookTests(TestCase):
     def post(self, body: dict, secret="s3cret"):

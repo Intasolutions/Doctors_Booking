@@ -3,7 +3,7 @@ from rest_framework import serializers
 from accounts.phone import is_valid_phone, normalize_phone, pretty_phone
 
 from . import services as S
-from .models import Appointment, Doctor, Leave, Patient, Session, TimeBlock
+from .models import SLOT_MINUTES, Appointment, Doctor, Leave, Patient, Session, TimeBlock
 
 
 class DoctorPublicSerializer(serializers.ModelSerializer):
@@ -161,7 +161,7 @@ class SessionItemSerializer(serializers.ModelSerializer):
 
 
 class ScheduleSerializer(serializers.Serializer):
-    slot_minutes = serializers.ChoiceField(choices=[5, 10, 15, 20, 30, 45, 60])
+    slot_minutes = serializers.ChoiceField(choices=SLOT_MINUTES)
     sessions = SessionItemSerializer(many=True)
 
     def validate_sessions(self, items):

@@ -7,7 +7,7 @@ password, erase personal data) and the WhatsApp message log.
 
 from datetime import timedelta
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
@@ -22,6 +22,7 @@ from whatsapp.models import Conversation, MessageLog
 from . import services as S
 from .models import Appointment, Doctor, Patient
 from .serializers import DoctorAppointmentSerializer
+from .views import schedule_change_confirmed, schedule_conflict_response
 
 A = Appointment
 
@@ -187,6 +188,12 @@ class AdminDoctorsView(AdminView):
         phone, err = phone_or_error(v.pop("phone"))
         if err:
             return Response({"phone": [err]}, status=400)
+        # Same normalising as Doctor.save(), so "dr- anitha" is caught as a duplicate here.
+        code = (v.pop("code", "") or "").upper().replace(" ", "")
+        if code and Doctor.objects.filter(code=code).exists():
+            return Response({"code": ["Another doctor already uses this code."]}, status=400)
+        if code:
+            v["code"] = code
         username = (v.pop("username") or f"dr.{v['first_name'].split()[0].lower()}").strip()
         base, n = username, 2
         while User.objects.filter(username=username).exists():
@@ -199,10 +206,6 @@ class AdminDoctorsView(AdminView):
         else:
             user.set_unusable_password()  # can still sign in with a WhatsApp code to their phone
         user.save()
-        if not v.get("code"):
-            v.pop("code", None)
-        elif Doctor.objects.filter(code=v["code"].upper()).exists():
-            raise serializers.ValidationError({"code": ["Another doctor already uses this code."]})
         d = Doctor.objects.create(user=user, **v)
         return Response(doctor_out(d), status=201)
 
@@ -219,6 +222,13 @@ class AdminDoctorDetailView(AdminView):
         s = DoctorInSerializer(d, data=request.data, partial=True)
         s.is_valid(raise_exception=True)
         v = dict(s.validated_data)
+        # A new time per patient moves the slot grid: bookings off the new grid
+        # are cancelled only once the admin confirms (same rule as the portal).
+        affected = []
+        if v.get("slot_minutes") and v["slot_minutes"] != d.slot_minutes:
+            affected = S.schedule_conflicts(d, slot_minutes=v["slot_minutes"])
+            if affected and not schedule_change_confirmed(request):
+                return schedule_conflict_response(affected)
         u = d.user
         if "phone" in v:
             phone, err = phone_or_error(v.pop("phone"), exclude_user=u)
@@ -247,7 +257,8 @@ class AdminDoctorDetailView(AdminView):
         for f, val in v.items():
             setattr(d, f, val)
         d.save()
-        return Response(doctor_out(d))
+        S.cancel_for_schedule_change(affected)
+        return Response({**doctor_out(d), "cancelled": [a.code for a in affected]})
 
     @transaction.atomic
     def delete(self, request, slug):
@@ -371,13 +382,25 @@ class AdminAppointmentActionView(AdminView):
                 new = request.data.get("status")
                 if new not in A.Status.values or new == A.Status.CANCELLED:
                     return bad("Choose confirmed, checked_in, completed or no_show. Use cancel to cancel.")
-                # God mode: any status, including reopening a cancelled visit if its slot is still free.
-                if a.status == A.Status.CANCELLED:
+                # God mode: any status. Reopening a cancelled visit still follows the
+                # booking rules (leave, blocked time, hours, slot still free).
+                reopening = a.status == A.Status.CANCELLED
+                if reopening:
                     if A.objects.filter(doctor=a.doctor, date=a.date, start=a.start).exclude(pk=a.pk).exclude(status="cancelled").exists():
                         return bad("That time has been booked by someone else since, so this visit can't be reopened.")
+                    S.check_reopen(a)
                     a.cancelled_by, a.cancel_reason = "", ""
                 a.status = new
-                a.save()
+                try:
+                    with transaction.atomic():
+                        a.save()
+                except IntegrityError:
+                    return bad("That time has been booked by someone else since, so this visit can't be reopened.")
+                n = S.now()
+                if reopening and new == A.Status.CONFIRMED and (a.date > n.date() or (a.date == n.date() and a.start >= n.time())):
+                    from . import notifications
+
+                    notifications.appointment_booked(a)  # patient and doctor hear it is back on
             else:
                 return bad("Unknown action.", 404)
         except S.BookingError as exc:

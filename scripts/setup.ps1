@@ -19,6 +19,10 @@ try {
         if (-not (Test-Path "venv\Scripts\python.exe")) { python -m venv venv }
         & .\venv\Scripts\python.exe -m pip install --quiet --disable-pip-version-check -r requirements.txt
     }
+    Invoke-Step "API: settings" "$root\backend" {
+        # Testing settings: WhatsApp stays in console mode, nothing is sent.
+        if (-not (Test-Path ".env")) { Copy-Item ".env.example" ".env" }
+    }
     Invoke-Step "API: database" "$root\backend" {
         & .\venv\Scripts\python.exe manage.py migrate --verbosity 0
     }
@@ -26,11 +30,12 @@ try {
         $env:PYTHONIOENCODING = "utf-8"
         & .\venv\Scripts\python.exe manage.py seed_demo --no-bookings
     }
+    Invoke-Step "Project: run tools" "$root" { npm install --no-audit --no-fund }
     Invoke-Step "Website: packages" "$root\web" { npm install --no-audit --no-fund }
     Invoke-Step "Mobile app: packages" "$root\mobile" { npm install --no-audit --no-fund }
 
     Write-Host ""
-    Write-Host "Setup finished. Double-click start.bat to run CareSlot." -ForegroundColor Green
+    Write-Host "Setup finished. Start CareSlot with:  npm run dev" -ForegroundColor Green
 } catch {
     Write-Host ""
     Write-Host $_ -ForegroundColor Red

@@ -46,10 +46,13 @@ export function hasToken() {
 export class ApiError extends Error {
   status: number;
   fields: Record<string, string>;
-  constructor(status: number, message: string, fields: Record<string, string> = {}) {
+  /** The response body as sent, for errors that carry extra details. */
+  data: unknown;
+  constructor(status: number, message: string, fields: Record<string, string> = {}, data: unknown = null) {
     super(message);
     this.status = status;
     this.fields = fields;
+    this.data = data;
   }
 }
 
@@ -121,7 +124,7 @@ export async function api<T = unknown>(path: string, opts: Options = {}, retried
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const { message, fields } = messageFrom(data);
-    throw new ApiError(res.status, message, fields);
+    throw new ApiError(res.status, message, fields, data);
   }
   return data as T;
 }

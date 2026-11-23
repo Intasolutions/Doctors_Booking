@@ -9,17 +9,17 @@ mobile/    Expo (React Native) patient app for Android and iOS
 demo/      The original clickable HTML demo
 ```
 
-## Quick start on Windows (testing)
+## Quick start (testing)
 
-Run these from PowerShell in the project folder:
+Run these in a terminal in the project folder:
 
 | Command | What it does |
 |---|---|
-| `.\scripts\setup.ps1` | One time: installs everything and creates the database with an admin and 4 sample doctors |
-| `.\scripts\start.ps1` | Opens the API and the website in their own windows (add `-WithApp` for the mobile app) |
-| `.\scripts\reset-data.ps1` | Clears **all** data (bookings, patients, accounts, messages) and keeps only the admin and sample doctors |
-
-If PowerShell refuses to run scripts, run this once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+| `npm run setup` | One time: installs everything and creates the database with an admin and 4 sample doctors |
+| `npm run dev` | Starts the API (port 8000) and the website (port 3000) together in this terminal. Press **Ctrl+C** to stop both |
+| `npm run dev:app` | Starts the mobile app (Expo), in a second terminal |
+| `npm test` | Runs the API's automated tests |
+| `npm run reset` | Clears **all** data (bookings, patients, accounts, messages) and keeps only the admin and sample doctors. Asks you to type YES first |
 
 Then open http://localhost:3000. Logins: `admin` / `careslot123`, and the doctors `dr.anitha`, `dr.rahul`, `dr.fathima` and `dr.joseph` / `careslot123`. While testing, the WhatsApp code appears on screen, and no real WhatsApp messages are sent.
 
@@ -35,7 +35,7 @@ Sign in as an admin. The site opens **Admin** at http://localhost:3000/admin, wh
 
 Patients and doctors can't open any admin page or admin API.
 
-## Run it locally (manual)
+## Run each part separately (manual)
 
 You need Python 3.12+ and Node.js 22.13+ (Expo 58 requires it; this PC has 22.12, so update Node before using the mobile app's lint and dev tools).
 

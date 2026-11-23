@@ -9,6 +9,7 @@ import type { AdminDoctor } from "@/lib/admin-types";
 import { api, ApiError } from "@/lib/api";
 
 import { openDoctorPortal } from "./admin-nav";
+import { affectedFrom, type AffectedBooking, ScheduleConflictDialog } from "./schedule-conflict";
 import { useToast } from "./toast";
 import { Button, ErrorNote, Field } from "./ui";
 
@@ -50,8 +51,11 @@ export function AdminDoctorForm({ doctor }: { doctor?: AdminDoctor }) {
   const set = (k: string, v: string | boolean) => setF((x) => ({ ...x, [k]: v }));
   const str = (k: string) => String(f[k] ?? "");
 
+  // Booked patients a new time per patient would leave out, waiting for the admin's OK.
+  const [affected, setAffected] = useState<AffectedBooking[] | null>(null);
+
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: (cancelAffected: boolean) => {
       const body: Record<string, unknown> = {
         ...f,
         experience_years: Number(f.experience_years || 0),
@@ -63,23 +67,31 @@ export function AdminDoctorForm({ doctor }: { doctor?: AdminDoctor }) {
       if (!f.password) delete body.password;
       // An existing doctor's status is changed from the Doctors list, with a confirmation.
       if (doctor) delete body.is_active;
+      if (cancelAffected) body.cancel_affected = true;
       return doctor
-        ? api<AdminDoctor>(`/admin/doctors/${doctor.slug}/`, { method: "PATCH", body })
-        : api<AdminDoctor>("/admin/doctors/", { method: "POST", body });
+        ? api<AdminDoctor & { cancelled?: string[] }>(`/admin/doctors/${doctor.slug}/`, { method: "PATCH", body })
+        : api<AdminDoctor & { cancelled?: string[] }>("/admin/doctors/", { method: "POST", body });
     },
     onSuccess: (d) => {
+      setAffected(null);
       qc.invalidateQueries({ queryKey: ["admin-doctors"] });
       qc.invalidateQueries({ queryKey: ["admin-doctor", d.slug] });
       qc.invalidateQueries({ queryKey: ["admin-stats"] });
       if (doctor) {
-        toast.success("Changes saved.");
+        const n = d.cancelled?.length ?? 0;
+        toast.success(n ? `Changes saved. ${n} booking${n > 1 ? "s were" : " was"} cancelled and the patient${n > 1 ? "s were" : " was"} told on WhatsApp.` : "Changes saved.");
         setF((x) => ({ ...x, password: "" }));
       } else {
         toast.success(`${d.name} added.`);
         router.replace(`/admin/doctors/${d.slug}?created=1`);
       }
     },
+    onError: (e) => {
+      const list = affectedFrom(e);
+      if (list) setAffected(list);
+    },
   });
+  const conflict = !!affectedFrom(save.error);
   const fields = save.error instanceof ApiError ? save.error.fields : {};
 
   const useHere = () => {
@@ -108,7 +120,7 @@ export function AdminDoctorForm({ doctor }: { doctor?: AdminDoctor }) {
       className="grid gap-5"
       onSubmit={(e) => {
         e.preventDefault();
-        save.mutate();
+        save.mutate(false);
       }}
     >
       <section className="card grid gap-4 p-5">
@@ -190,9 +202,18 @@ export function AdminDoctorForm({ doctor }: { doctor?: AdminDoctor }) {
         </label>
       </section>
 
-      <ErrorNote>{save.error?.message}</ErrorNote>
+      <ErrorNote>{affected || conflict ? "" : save.error?.message}</ErrorNote>
+      {affected && (
+        <ScheduleConflictDialog
+          affected={affected}
+          loading={save.isPending}
+          error={save.error && !conflict ? save.error.message : ""}
+          onConfirm={() => save.mutate(true)}
+          onClose={() => (setAffected(null), save.reset())}
+        />
+      )}
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant="primary" type="submit" loading={save.isPending} disabled={!valid}>
+        <Button variant="primary" type="submit" loading={save.isPending && !affected} disabled={!valid}>
           {doctor ? "Save changes" : "Add doctor"}
         </Button>
         {doctor && (

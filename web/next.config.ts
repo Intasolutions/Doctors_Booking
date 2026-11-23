@@ -2,12 +2,24 @@ import type { NextConfig } from "next";
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
 
 export default function config(phase: string): NextConfig {
-  // NEXT_PUBLIC_API_BASE_URL is baked into the build. Without it the site
-  // would call http://127.0.0.1:8000/api from real browsers and fail.
-  if (phase === PHASE_PRODUCTION_BUILD && !process.env.NEXT_PUBLIC_API_BASE_URL && !process.env.ALLOW_LOCAL_API) {
-    throw new Error("NEXT_PUBLIC_API_BASE_URL must be set for a production build (e.g. https://api.careslot.in/api).");
+  // NEXT_PUBLIC_API_BASE_URL is baked into the build. Without it the site calls
+  // the API on port 8000 of whatever address it was opened on: right for testing
+  // on this PC, wrong on a live server.
+  if (phase === PHASE_PRODUCTION_BUILD && !process.env.NEXT_PUBLIC_API_BASE_URL) {
+    // Deploy builds (Vercel, CI) must name the live API, so stop them here.
+    if (process.env.VERCEL || process.env.CI) {
+      throw new Error("NEXT_PUBLIC_API_BASE_URL must be set for a deploy build (e.g. https://api.careslot.in/api).");
+    }
+    // The build loads this file twice; the second load inherits this flag.
+    if (!process.env.CARESLOT_API_WARNED) {
+      process.env.CARESLOT_API_WARNED = "1";
+      console.warn("⚠ NEXT_PUBLIC_API_BASE_URL is not set: this build is for local testing only (API at <this address>:8000).");
+    }
   }
   return {
+    // The project root has its own package-lock.json (for `npm run dev`), which
+    // would otherwise make Next.js treat the whole project as the workspace.
+    turbopack: { root: __dirname },
     // Hide the Next.js badge in the corner while testing.
     devIndicators: false,
     // Addresses allowed to load the dev server's code. Without an entry, the

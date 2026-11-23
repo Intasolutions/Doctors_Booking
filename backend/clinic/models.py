@@ -6,6 +6,9 @@ from django.utils.text import slugify
 from accounts.phone import normalize_phone
 
 WEEKDAYS = [(0, "Mon"), (1, "Tue"), (2, "Wed"), (3, "Thu"), (4, "Fri"), (5, "Sat"), (6, "Sun")]
+# Minutes per patient. Every form (Django admin, admin portal, doctor portal)
+# offers only these; 0 would make the slot list endless.
+SLOT_MINUTES = [5, 10, 15, 20, 30, 45, 60]
 
 
 class Doctor(models.Model):
@@ -26,7 +29,7 @@ class Doctor(models.Model):
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     fee = models.PositiveIntegerField(help_text="Consultation fee in rupees")
-    slot_minutes = models.PositiveSmallIntegerField(default=15)
+    slot_minutes = models.PositiveSmallIntegerField(default=15, choices=[(m, f"{m} minutes") for m in SLOT_MINUTES])
     is_active = models.BooleanField(default=True)
     notify_whatsapp = models.BooleanField(default=True, help_text="Send booking alerts to the doctor's WhatsApp")
     # Set when an admin deletes a doctor who has booking history: the doctor
