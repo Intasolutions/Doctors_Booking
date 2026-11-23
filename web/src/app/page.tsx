@@ -4,11 +4,13 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { LocateFixed, MapPin, MapPinOff, MessageCircle, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
+import { InstallCard } from "@/components/pwa";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { Avatar, Button, Empty, Spinner } from "@/components/ui";
 import { api } from "@/lib/api";
+import { useHotkeys } from "@/lib/hotkeys";
 import { useAuth } from "@/lib/auth";
 import { rupees, waNumberDisplay } from "@/lib/format";
 import { kmLabel, useGeolocation } from "@/lib/location";
@@ -62,6 +64,8 @@ export default function HomePage() {
   const [spec, setSpec] = useState("");
   const [area, setArea] = useState("");
   const [radius, setRadius] = useState(0);
+  const searchRef = useRef<HTMLInputElement>(null);
+  useHotkeys({ "/": () => searchRef.current?.focus() });
   const coords = geo.status === "ready" ? geo.coords : null;
 
   const meta = useQuery({ queryKey: ["meta"], queryFn: () => api<Meta>("/meta/", { auth: false }) });
@@ -104,19 +108,30 @@ export default function HomePage() {
             <p className="text-sm text-brand-dark">
               <b>New to CareSlot?</b> Register once with your phone number to book for yourself and your family.
             </p>
-            <Link href="/register" className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">
+            <Link href="/register" className="btn btn-primary">
               Register
             </Link>
           </div>
         )}
 
         <div className="mt-5 grid gap-3">
+          <InstallCard />
           <LocationBar geo={geo} area={area} setArea={setArea} areas={meta.data?.areas || []} />
           <div className="grid gap-2.5 sm:grid-cols-[2fr_1fr_1fr]">
             <label className="relative">
               <span className="sr-only">Search</span>
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
-              <input className="input pl-9" placeholder="Search by doctor, specialty or area" value={q} onChange={(e) => setQ(e.target.value)} />
+              <input
+                ref={searchRef}
+                type="search"
+                enterKeyHint="search"
+                className="input pl-9 pr-9"
+                placeholder="Search by doctor, specialty or area"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => e.key === "Escape" && setQ("")}
+              />
+              <span className="kbd pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">/</span>
             </label>
             <select className="input" value={spec} onChange={(e) => setSpec(e.target.value)} aria-label="Specialty">
               <option value="">All specialties</option>
@@ -188,7 +203,7 @@ export default function HomePage() {
                           rememberSlot(d.slug, d.next_slots!.date, t.time);
                           router.push(`/doctors/${d.slug}`);
                         }}
-                        className="tabular rounded-lg border border-accent/40 bg-surface px-2.5 py-1.5 text-[13px] font-semibold text-accent-dark hover:border-accent hover:bg-white"
+                        className="tabular min-h-9 rounded-lg border border-accent/40 bg-surface px-3 text-[13px] font-semibold text-accent-dark touch:min-h-11 touch:px-3.5 hover:border-accent hover:bg-white"
                         aria-label={`Book ${d.name} at ${t.label}, ${d.next_slots!.label}`}
                       >
                         {t.label}
@@ -200,10 +215,10 @@ export default function HomePage() {
                 <p className="rounded-lg bg-canvas px-3 py-2 text-[13px] text-muted">No free times in the next two weeks</p>
               )}
               <div className="flex flex-wrap gap-2">
-                <Link href={`/doctors/${d.slug}`} className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">
+                <Link href={`/doctors/${d.slug}`} className="btn btn-primary">
                   More times
                 </Link>
-                <a href={d.whatsapp_link} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:border-muted">
+                <a href={d.whatsapp_link} target="_blank" rel="noopener" className="btn btn-secondary">
                   <MessageCircle className="size-4" aria-hidden /> WhatsApp
                 </a>
               </div>

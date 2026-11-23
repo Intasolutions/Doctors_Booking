@@ -63,7 +63,7 @@ export default function AdminMessagesPage() {
         title="WhatsApp messages"
         description="Everything the bot sent and received, including confirmations and reminders."
         actions={
-          <Link href="/portal/whatsapp" className="rounded-lg border border-line bg-surface px-4 py-2 text-sm font-semibold hover:border-brand">
+          <Link href="/portal/whatsapp" className="btn btn-secondary hover:border-brand">
             Open the WhatsApp tester
           </Link>
         }
@@ -89,7 +89,7 @@ export default function AdminMessagesPage() {
                 <button onClick={() => setPhone(t.phone)} className={`grid w-full gap-0.5 px-4 py-3 text-left hover:bg-canvas ${t.phone === phone ? "bg-brand-soft" : ""}`}>
                   <span className="flex items-center justify-between gap-2">
                     <b className="truncate">{t.name || t.phone_display}</b>
-                    <span className="shrink-0 text-[11px] text-muted">{time(t.updated_at)}</span>
+                    <span className="shrink-0 text-xs text-muted">{time(t.updated_at)}</span>
                   </span>
                   <span className="text-xs text-muted">
                     {t.name ? `${t.phone_display} · ` : ""}
@@ -111,7 +111,7 @@ export default function AdminMessagesPage() {
                   <p className="font-bold">{selected?.name || selected?.phone_display || phone}</p>
                   <p className="text-xs text-muted">{selected?.phone_display}</p>
                 </div>
-                <button onClick={() => setPhone(null)} className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold lg:hidden">
+                <button onClick={() => setPhone(null)} className="btn btn-secondary btn-sm lg:hidden">
                   ← All conversations
                 </button>
               </div>

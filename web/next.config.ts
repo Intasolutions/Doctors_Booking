@@ -26,5 +26,26 @@ export default function config(phase: string): NextConfig {
     // page shows but nothing on it works (buttons, sign-in). Covers 127.0.0.1
     // on this PC and Wi-Fi addresses such as http://192.168.1.160:3000.
     allowedDevOrigins: ["127.0.0.1", "0.0.0.0", "192.168.*.*", "10.*.*.*", "172.*.*.*"],
+    async headers() {
+      return [
+        {
+          source: "/(.*)",
+          headers: [
+            { key: "X-Content-Type-Options", value: "nosniff" },
+            { key: "X-Frame-Options", value: "DENY" },
+            { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          ],
+        },
+        {
+          // The installable app's service worker: never cached, so an update reaches phones at once.
+          source: "/sw.js",
+          headers: [
+            { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+            { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+            { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+          ],
+        },
+      ];
+    },
   };
 }

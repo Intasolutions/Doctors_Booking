@@ -119,18 +119,22 @@ export default function DoctorPage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 px-4 pb-16 pt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <section className="grid min-w-0 grid-cols-1 content-start gap-5">
-          <div className="flex items-center gap-4">
-            <Avatar name={d.name} size="lg" />
-            <div className="min-w-0">
-              <h1 className="text-2xl font-extrabold">{d.name}</h1>
-              <p className="text-muted">
-                {d.specialty} · {d.experience_years} yrs experience
-              </p>
-              <p className="text-sm">{d.qualifications}</p>
-            </div>
+      {/* Phones: who the doctor is, then booking straight away, then the details.
+          Computers: details on the left, booking on the right and kept in view. */}
+      <main className="mx-auto grid w-full max-w-6xl grid-cols-1 content-start gap-5 px-4 pb-10 pt-5 sm:pt-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-x-8 lg:gap-y-5 lg:pb-16">
+        <div className="order-1 flex items-center gap-4 lg:order-none lg:col-start-1 lg:row-start-1">
+          <Avatar name={d.name} size="lg" />
+          <div className="min-w-0">
+            <h1 className="text-2xl font-extrabold">{d.name}</h1>
+            <p className="text-muted">
+              {d.specialty} · {d.experience_years} yrs experience
+            </p>
+            <p className="text-sm">
+              {d.qualifications} · <b>{rupees(d.fee)}</b>
+            </p>
           </div>
+        </div>
+        <section className="order-3 grid min-w-0 grid-cols-1 content-start gap-5 lg:order-none lg:col-start-1 lg:row-start-2">
           {d.about && <p className="max-w-prose text-[15px]">{d.about}</p>}
           <dl className="card grid gap-3 p-5 text-sm">
             <div className="flex gap-3">
@@ -138,7 +142,7 @@ export default function DoctorPage() {
               <div>
                 <dt className="sr-only">Address</dt>
                 <dd>{d.address}</dd>
-                <a href={d.directions_url} target="_blank" rel="noopener" className="font-semibold text-brand">
+                <a href={d.directions_url} target="_blank" rel="noopener" className="-ml-1 inline-flex min-h-10 items-center rounded-lg px-1 font-semibold text-brand touch:min-h-11">
                   Get directions
                 </a>
               </div>
@@ -164,12 +168,15 @@ export default function DoctorPage() {
               <span className="text-muted">consultation, paid at the clinic · about {d.slot_minutes} min</span>
             </div>
           </dl>
-          <a href={d.whatsapp_link} target="_blank" rel="noopener" className="inline-flex items-center gap-2 text-sm font-semibold text-brand">
+          <a href={d.whatsapp_link} target="_blank" rel="noopener" className="inline-flex min-h-11 items-center gap-2 self-start text-sm font-semibold text-brand">
             <MessageCircle className="size-4" aria-hidden /> Or book on WhatsApp with code {d.code}
           </a>
         </section>
 
-        <section className="card grid min-w-0 grid-cols-1 content-start gap-5 p-5 sm:p-6" aria-label="Book a visit">
+        <section
+          className="card order-2 grid min-w-0 grid-cols-1 content-start gap-5 p-4 sm:p-6 lg:order-none lg:sticky lg:top-20 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start"
+          aria-label="Book a visit"
+        >
           {booked ? (
             <div className="grid justify-items-center gap-3 py-6 text-center">
               <div className="grid size-14 place-items-center rounded-full bg-accent-soft text-accent-dark">
@@ -184,7 +191,7 @@ export default function DoctorPage() {
               </p>
               <p className="text-sm">A confirmation is on its way to your WhatsApp, and we&apos;ll remind you a day before.</p>
               <div className="flex flex-wrap justify-center gap-2 pt-2">
-                <Link href="/appointments" className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">
+                <Link href="/appointments" className="btn btn-primary">
                   My appointments
                 </Link>
                 <Button onClick={() => (setBooked(null), setTime(null), setReason(""))}>Book another</Button>
@@ -210,7 +217,7 @@ export default function DoctorPage() {
                         sessionStorage.setItem(PENDING, JSON.stringify({ slug, date, time }));
                       } catch {}
                     }}
-                    className="justify-self-start rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
+                    className="btn btn-primary justify-self-start"
                   >
                     Register to book
                   </Link>
@@ -227,7 +234,7 @@ export default function DoctorPage() {
                         sessionStorage.setItem(PENDING, JSON.stringify({ slug, date, time }));
                       } catch {}
                     }}
-                    className="justify-self-start rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
+                    className="btn btn-primary justify-self-start"
                   >
                     Complete registration
                   </Link>

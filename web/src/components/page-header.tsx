@@ -18,7 +18,7 @@ export function PageHeader({
     <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-line pb-5">
       <div className="grid min-w-0 gap-1">
         {back && (
-          <Link href={back.href} className="mb-1 text-sm font-semibold text-brand hover:text-brand-dark">
+          <Link href={back.href} className="-ml-1 mb-1 inline-flex min-h-10 items-center self-start justify-self-start rounded-lg px-1 text-sm font-semibold text-brand hover:text-brand-dark touch:min-h-11">
             ← {back.label}
           </Link>
         )}

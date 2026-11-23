@@ -15,7 +15,8 @@ type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 export function Button({ variant = "secondary", size = "md", loading, className = "", children, disabled, ...rest }: BtnProps) {
   const base =
     "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50";
-  const sizes = { sm: "px-2.5 py-1.5 text-[13px]", md: "px-4 py-2 text-sm" };
+  // Compact for a mouse, a full fingertip (44px) on phones and tablets.
+  const sizes = { sm: "min-h-8 px-2.5 text-[13px] touch:min-h-11 touch:px-3.5", md: "min-h-10 px-4 text-sm touch:min-h-11" };
   const variants = {
     primary: "bg-brand text-white hover:bg-brand-dark",
     secondary: "border border-line bg-surface text-ink hover:border-muted",
@@ -123,7 +124,7 @@ export function Segmented<T extends string | number>({
           type="button"
           onClick={() => onChange(o.value)}
           aria-pressed={o.value === value}
-          className={`rounded-full border px-3 py-1.5 text-[13px] font-semibold transition ${
+          className={`min-h-9 rounded-full border px-3.5 text-[13px] font-semibold transition touch:min-h-11 touch:px-4 touch:text-sm ${
             o.value === value ? "border-ink bg-ink text-white" : "border-line bg-surface hover:border-muted"
           }`}
         >
@@ -142,20 +143,39 @@ export function Modal({ title, onClose, children, wide }: { title: string; onClo
     close.current = onClose;
   });
   useEffect(() => {
-    // Escape closes the dialog wherever the focus is; the first field is ready to type into.
+    // Escape closes the dialog wherever the focus is. Focus starts on the first field, or on a
+    // button the dialog asked for (autoFocus), so Enter or typing works without reaching for the mouse.
+    const opener = document.activeElement as HTMLElement | null;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close.current();
     document.addEventListener("keydown", onKey);
-    const first = box.current?.querySelector<HTMLElement>("input:not([type=hidden]):not([disabled]), select, textarea");
-    (first ?? box.current)?.focus();
-    return () => document.removeEventListener("keydown", onKey);
+    if (!box.current?.contains(document.activeElement)) {
+      const first = box.current?.querySelector<HTMLElement>("input:not([type=hidden]):not([disabled]), select, textarea");
+      (first ?? box.current)?.focus();
+    }
+    const html = document.documentElement;
+    const prev = html.style.overflow;
+    html.style.overflow = "hidden"; // the page behind doesn't scroll under your finger
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      html.style.overflow = prev;
+      if (opener?.isConnected) opener.focus({ preventScroll: true }); // back where you were
+    };
   }, []);
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/50 p-0 sm:items-center sm:p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div ref={box} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title} className={`grid max-h-[92vh] w-full gap-4 overflow-y-auto rounded-t-2xl bg-surface p-5 shadow-xl sm:rounded-2xl ${wide ? "sm:max-w-2xl" : "sm:max-w-md"}`}>
+      <div
+        ref={box}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className={`grid max-h-[92dvh] w-full gap-4 overflow-y-auto overscroll-contain rounded-t-2xl bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl outline-none sm:rounded-2xl sm:pb-5 ${wide ? "sm:max-w-2xl" : "sm:max-w-md"}`}
+      >
+        <div className="mx-auto -mt-2 h-1 w-10 rounded-full bg-line sm:hidden" aria-hidden />
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-bold">{title}</h2>
-          <button onClick={onClose} className="rounded-lg px-2 py-1 text-sm font-semibold text-muted hover:bg-canvas hover:text-ink" aria-label="Close">
-            Close
+          <button onClick={onClose} className="min-h-10 rounded-lg px-3 text-sm font-semibold text-muted hover:bg-canvas hover:text-ink touch:min-h-11" aria-label="Close">
+            Close <span className="kbd ml-1">Esc</span>
           </button>
         </div>
         {children}
@@ -174,7 +194,7 @@ export function Switch({ checked, onChange, label, disabled }: { checked: boolea
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-50 ${
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition before:absolute before:-inset-2.5 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-50 ${
         checked ? "bg-accent" : "bg-line"
       }`}
     >
@@ -212,4 +232,16 @@ export function SkeletonList({ rows = 3 }: { rows?: number }) {
       ))}
     </div>
   );
+}
+
+/**
+ * Puts the cursor in a field once the page is ready. Unlike the autoFocus attribute,
+ * this also works on pages first drawn on the server (React skips autoFocus there).
+ */
+export function useFocusOnMount<T extends HTMLElement>(enabled = true) {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    if (enabled) ref.current?.focus({ preventScroll: true });
+  }, [enabled]);
+  return ref;
 }

@@ -13,10 +13,10 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
       <h1 className="text-2xl font-extrabold">Something went wrong on this page</h1>
       <p className="text-muted">Your bookings are safe. Try again, and if it keeps happening, contact the clinic.</p>
       <div className="flex flex-wrap justify-center gap-2">
-        <button onClick={reset} className="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark">
+        <button onClick={reset} className="btn btn-primary px-5">
           Try again
         </button>
-        <Link href="/" className="rounded-lg border border-line px-5 py-2.5 text-sm font-semibold hover:border-muted">
+        <Link href="/" className="btn btn-secondary px-5">
           Home page
         </Link>
       </div>

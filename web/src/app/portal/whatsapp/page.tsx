@@ -77,22 +77,22 @@ function Bubble({ m, onTap, onList, onLocation }: { m: Msg; onTap: (id: string, 
         </p>
       </div>
       {buttons.map((b) => (
-        <button key={b.id} onClick={() => onTap(b.id, b.title)} className="flex w-full items-center justify-center gap-1.5 border-t border-line px-3 py-2 font-semibold text-brand hover:bg-canvas">
+        <button key={b.id} onClick={() => onTap(b.id, b.title)} className="flex min-h-10 w-full items-center justify-center gap-1.5 border-t border-line px-3 font-semibold touch:min-h-11 text-brand hover:bg-canvas">
           <Reply className="size-3.5" aria-hidden /> {b.title}
         </button>
       ))}
       {i?.type === "list" && (
-        <button onClick={() => onList(m)} className="flex w-full items-center justify-center gap-1.5 border-t border-line px-3 py-2 font-semibold text-brand hover:bg-canvas">
+        <button onClick={() => onList(m)} className="flex min-h-10 w-full items-center justify-center gap-1.5 border-t border-line px-3 font-semibold touch:min-h-11 text-brand hover:bg-canvas">
           <List className="size-3.5" aria-hidden /> {i.action.button}
         </button>
       )}
       {i?.type === "location_request_message" && (
-        <button onClick={onLocation} className="flex w-full items-center justify-center gap-1.5 border-t border-line px-3 py-2 font-semibold text-brand hover:bg-canvas">
+        <button onClick={onLocation} className="flex min-h-10 w-full items-center justify-center gap-1.5 border-t border-line px-3 font-semibold touch:min-h-11 text-brand hover:bg-canvas">
           <MapPin className="size-3.5" aria-hidden /> Send location
         </button>
       )}
       {i?.type === "cta_url" && (
-        <a href={i.action.parameters!.url} target="_blank" rel="noopener" className="flex items-center justify-center gap-1.5 border-t border-line px-3 py-2 font-semibold text-brand hover:bg-canvas">
+        <a href={i.action.parameters!.url} target="_blank" rel="noopener" className="flex min-h-10 items-center justify-center gap-1.5 border-t border-line px-3 font-semibold touch:min-h-11 text-brand hover:bg-canvas">
           <ExternalLink className="size-3.5" aria-hidden /> {i.action.parameters!.display_text}
         </a>
       )}
@@ -145,11 +145,11 @@ export default function WhatsAppTesterPage() {
           </Field>
           <p className="label">Quick messages</p>
           <div className="flex flex-wrap gap-1.5">
-            <button onClick={shareLocation} className="inline-flex items-center gap-1 rounded-full border border-brand bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand-dark">
+            <button onClick={shareLocation} className="inline-flex min-h-8 items-center gap-1 rounded-full border border-brand bg-brand-soft px-3 text-xs font-semibold touch:min-h-10 text-brand-dark">
               <MapPin className="size-3" aria-hidden /> Share location (Kakkanad)
             </button>
             {["Hi", "DR-ANITHA", "My bookings", "today", "tomorrow", "block 7pm-8pm", "help"].map((t) => (
-              <button key={t} onClick={() => send.mutate({ text: t })} className="rounded-full border border-line bg-surface px-2.5 py-1 font-mono text-xs font-semibold hover:border-muted">
+              <button key={t} onClick={() => send.mutate({ text: t })} className="min-h-8 rounded-full border border-line bg-surface px-3 font-mono text-xs touch:min-h-10 font-semibold hover:border-muted">
                 {t}
               </button>
             ))}

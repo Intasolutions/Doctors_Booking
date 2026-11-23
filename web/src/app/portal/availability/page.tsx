@@ -97,7 +97,7 @@ function HoursForm({ initial }: { initial: Schedule }) {
                   </Button>
                 </div>
               ))}
-              <button className="inline-flex items-center gap-1 justify-self-start text-[13px] font-semibold text-brand" onClick={() => update(i, (x) => [...x, x.length ? { start: "17:00", end: "20:00" } : { start: "09:00", end: "12:00" }])}>
+              <button className="-ml-2 inline-flex min-h-9 items-center gap-1 justify-self-start rounded-lg px-2 text-[13px] font-semibold text-brand hover:bg-brand-soft touch:min-h-11" onClick={() => update(i, (x) => [...x, x.length ? { start: "17:00", end: "20:00" } : { start: "09:00", end: "12:00" }])}>
                 <Plus className="size-3.5" aria-hidden /> Add session
               </button>
             </div>

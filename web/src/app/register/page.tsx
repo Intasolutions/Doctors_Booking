@@ -100,7 +100,7 @@ function Register() {
       <div className="grid gap-3">
         <h1 className="text-3xl font-extrabold">You&apos;re registered</h1>
         <p className="text-muted">Signed in as {user.name || user.phone_display}.</p>
-        <Link href="/" className="justify-self-start rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">
+        <Link href="/" className="btn btn-primary justify-self-start">
           Find doctors near you
         </Link>
       </div>
@@ -133,6 +133,7 @@ function Register() {
           }}
         >
           <ProfileFields
+            autoFocus
             value={profile}
             onChange={setProfile}
             errors={fields}

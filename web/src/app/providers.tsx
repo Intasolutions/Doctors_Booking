@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { OfflineBanner, PwaSetup } from "@/components/pwa";
 import { ToastProvider } from "@/components/toast";
 import { AuthProvider } from "@/lib/auth";
 
@@ -15,6 +16,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
   return (
     <QueryClientProvider client={client}>
+      <PwaSetup />
+      <OfflineBanner />
       <AuthProvider>
         <ToastProvider>{children}</ToastProvider>
       </AuthProvider>

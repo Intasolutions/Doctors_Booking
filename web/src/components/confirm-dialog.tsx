@@ -45,7 +45,8 @@ export function ConfirmDialog({
       <ErrorNote>{error}</ErrorNote>
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button onClick={onClose}>Go back</Button>
-        <Button variant={danger ? "dangerSolid" : "primary"} disabled={!ready} loading={loading} onClick={onConfirm}>
+        {/* Safe confirmations take Enter straight away; destructive ones need a deliberate click or Tab. */}
+        <Button variant={danger ? "dangerSolid" : "primary"} disabled={!ready} loading={loading} onClick={onConfirm} autoFocus={!danger && !typeToConfirm}>
           {confirmLabel}
         </Button>
       </div>

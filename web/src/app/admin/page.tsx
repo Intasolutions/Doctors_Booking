@@ -92,7 +92,7 @@ export default function AdminOverview() {
               <span className="text-sm">
                 <b className="tabular">{d.booked}</b> booked · <b className="tabular">{d.seen}</b> seen · <b className="tabular">{d.remaining}</b> to come
               </span>
-              <Link href="/portal" onClick={() => openDoctorPortal(d.slug)} className="rounded-lg border border-line px-3 py-1.5 text-[13px] font-semibold hover:border-brand">
+              <Link href="/portal" onClick={() => openDoctorPortal(d.slug)} className="btn btn-secondary btn-sm hover:border-brand">
                 Open queue
               </Link>
             </li>

@@ -26,7 +26,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={api}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 p-4 sm:items-end" aria-live="polite" role="status">
+      {/* Phones and tablets: drop down under the top bar, clear of the tab bar and action bars at the bottom.
+          Computers: bottom-right corner. */}
+      <div
+        className="pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col items-center gap-2 px-3 pt-[calc(4.25rem+env(safe-area-inset-top))] sm:items-end sm:px-4 lg:top-auto lg:bottom-0 lg:p-4"
+        aria-live="polite"
+        role="status"
+      >
         {toasts.map((t) => (
           <div
             key={t.id}
@@ -36,7 +42,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           >
             {t.kind === "success" ? <CircleCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> : <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />}
             <span className="flex-1">{t.text}</span>
-            <button onClick={() => remove(t.id)} className="opacity-60 hover:opacity-100" aria-label="Dismiss">
+            <button onClick={() => remove(t.id)} className="-m-2 grid size-9 shrink-0 place-items-center opacity-60 hover:opacity-100" aria-label="Dismiss">
               <X className="size-4" aria-hidden />
             </button>
           </div>

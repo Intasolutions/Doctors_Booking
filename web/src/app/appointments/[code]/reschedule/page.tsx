@@ -59,7 +59,7 @@ function Reschedule() {
           <Button variant="primary" disabled={!date || !time} loading={move.isPending} onClick={() => move.mutate()}>
             {date && time ? `Move to ${fmtDate(date)}, ${fmtTime(time)}` : "Pick a new time"}
           </Button>
-          <Link href="/appointments" className="rounded-lg px-4 py-2 text-sm font-semibold text-muted hover:text-ink">
+          <Link href="/appointments" className="btn text-muted hover:text-ink">
             Keep current time
           </Link>
         </div>

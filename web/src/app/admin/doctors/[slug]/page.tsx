@@ -45,7 +45,7 @@ function EditDoctor() {
               <span>
                 <b>Doctor added.</b> Next, set their weekly hours. Until then, patients can&apos;t book.
               </span>
-              <Link href="/portal/availability" onClick={() => openDoctorPortal(d.slug)} className="rounded-lg bg-brand px-3 py-1.5 font-semibold text-white">
+              <Link href="/portal/availability" onClick={() => openDoctorPortal(d.slug)} className="btn btn-primary btn-sm">
                 Set hours now
               </Link>
             </div>

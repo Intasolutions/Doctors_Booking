@@ -217,7 +217,7 @@ export function AdminDoctorForm({ doctor }: { doctor?: AdminDoctor }) {
           {doctor ? "Save changes" : "Add doctor"}
         </Button>
         {doctor && (
-          <Link href="/portal/availability" onClick={() => openDoctorPortal(doctor.slug)} className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:border-brand">
+          <Link href="/portal/availability" onClick={() => openDoctorPortal(doctor.slug)} className="btn btn-secondary hover:border-brand">
             Set hours and leave
           </Link>
         )}

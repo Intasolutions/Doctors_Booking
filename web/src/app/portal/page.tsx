@@ -76,7 +76,7 @@ function Walkin({ date, free, onDone }: { date: string; free: string[]; onDone: 
       <p className="label">Add a walk-in patient</p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_5rem_2fr_2fr_8rem]">
         <Field label="Name" htmlFor="wn">
-          <input id="wn" className="input" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <input id="wn" className="input" required autoFocus value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         </Field>
         <Field label="Age" htmlFor="wa">
           <input id="wa" className="input" inputMode="numeric" value={f.age} onChange={(e) => setF({ ...f, age: e.target.value.replace(/\D/g, "").slice(0, 3) })} />
@@ -146,10 +146,10 @@ export default function TodayPage() {
   const upNext = appts.filter((a) => a.status === "confirmed");
   const done = appts.filter((a) => a.status === "completed" || a.status === "no_show");
   const cancelled = appts.filter((a) => a.status === "cancelled");
-  // Card list on phones, table from tablets up. Used for each group below.
+  // Cards on phones and tablets, table on computers. Used for each group below.
   const renderList = (items: Appointment[]) => (
     <>
-        <ul className="grid gap-3 md:hidden">
+        <ul className="grid gap-3 md:grid-cols-2 lg:hidden">
           {items.map((a) => (
             <li key={a.code} className={`card grid gap-3 p-4 ${a.status === "cancelled" ? "opacity-60" : ""}`}>
               <div className="flex items-start justify-between gap-3">
@@ -174,7 +174,7 @@ export default function TodayPage() {
             </li>
           ))}
         </ul>
-        <div className="card hidden overflow-x-auto md:block">
+        <div className="card hidden overflow-x-auto lg:block">
           <table className="w-full min-w-[52rem] border-collapse text-sm">
             <thead>
               <tr className="bg-canvas text-left">
@@ -260,8 +260,8 @@ export default function TodayPage() {
           [s.remaining, s.waiting ? `Still to come · ${s.waiting} waiting` : "Still to come"],
           [rupees(s.collected), `Collected of ${rupees(s.expected)}`],
         ].map(([v, l]) => (
-          <div key={String(l)} className="card px-4 py-3">
-            <b className="tabular block font-display text-2xl">{v}</b>
+          <div key={String(l)} className="card px-3 py-2.5 sm:px-4 sm:py-3">
+            <b className="tabular block font-display text-xl sm:text-2xl">{v}</b>
             <span className="text-[13px] text-muted">{l}</span>
           </div>
         ))}
@@ -296,7 +296,7 @@ export default function TodayPage() {
         <>
           {isToday && (waiting[0] || upNext[0]) && (
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className={`grid content-start gap-2 rounded-2xl p-4 ${waiting[0] ? "bg-amber-50 ring-1 ring-amber-200" : "bg-surface ring-1 ring-line"}`}>
+              <div className={`content-start gap-2 rounded-2xl p-4 ${waiting[0] ? "grid bg-amber-50 ring-1 ring-amber-200" : "hidden bg-surface ring-1 ring-line sm:grid"}`}>
                 <p className="label">Waiting now{waiting.length > 1 ? ` · ${waiting.length} patients` : ""}</p>
                 {waiting[0] ? (
                   <>
@@ -354,7 +354,7 @@ export default function TodayPage() {
             ))}
           {cancelled.length > 0 && (
             <details className="grid gap-3">
-              <summary className="cursor-pointer text-sm font-bold text-muted">
+              <summary className="flex min-h-10 cursor-pointer items-center gap-2 text-sm font-bold text-muted touch:min-h-11">
                 Cancelled <span className="tabular rounded-full bg-canvas px-2 py-0.5 text-xs">{cancelled.length}</span>
               </summary>
               <div className="mt-3">{renderList(cancelled)}</div>
@@ -362,6 +362,36 @@ export default function TodayPage() {
           )}
         </>
       )}
+      {/* Phones and tablets: the queue's next step stays under the thumb while the list scrolls. */}
+      {isToday &&
+        (waiting[0] || upNext[0]) &&
+        (() => {
+          const a = waiting[0] ?? upNext[0];
+          const seen = !!waiting[0];
+          return (
+            <>
+              <div className="h-16 lg:hidden" aria-hidden />
+              <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t border-line bg-surface/95 px-4 py-2 shadow-[0_-4px_12px_rgb(14_34_54/0.06)] backdrop-blur lg:hidden">
+                <div className="mx-auto flex max-w-2xl items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-muted">{seen ? "Waiting now" : `Up next · ${fmtTime(a.time)}`}</p>
+                    <p className="truncate font-semibold">
+                      {a.patient.name}
+                      {a.patient.age != null ? `, ${a.patient.age}` : ""}
+                    </p>
+                  </div>
+                  <Button
+                    variant="primary"
+                    loading={status.isPending && status.variables?.a.code === a.code}
+                    onClick={() => status.mutate({ a, status: seen ? "completed" : "checked_in" })}
+                  >
+                    {seen ? "Mark seen" : "Check in"}
+                  </Button>
+                </div>
+              </div>
+            </>
+          );
+        })()}
       {ask && (
         <ConfirmDialog
           title={ask.status === "cancelled" ? `Cancel ${ask.a.patient.name}'s visit?` : `Mark ${ask.a.patient.name} as a no-show?`}

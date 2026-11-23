@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 import { SiteFooter, SiteHeader } from "@/components/site-header";
-import { Button, ErrorNote, Field, Segmented, Spinner } from "@/components/ui";
+import { Button, ErrorNote, Field, Segmented, Spinner, useFocusOnMount } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { TokenResponse } from "@/lib/types";
@@ -49,6 +49,9 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // Ready to type without reaching for the mouse.
+  const phoneRef = useFocusOnMount<HTMLInputElement>(mode === "otp" && !sent);
+  const userRef = useFocusOnMount<HTMLInputElement>(mode === "password");
 
   const done = (t: TokenResponse) => {
     signIn(t);
@@ -107,7 +110,7 @@ function LoginForm() {
             }}
           >
             <Field label="Mobile number (WhatsApp)" htmlFor="phone">
-              <input id="phone" className="input" inputMode="tel" autoComplete="tel" placeholder="98470 12345" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+              <input id="phone" ref={phoneRef} className="input" inputMode="tel" autoComplete="tel" placeholder="98470 12345" value={phone} onChange={(e) => setPhone(e.target.value)} required />
             </Field>
             <ErrorNote>{error}</ErrorNote>
             <Button variant="primary" loading={busy} type="submit">
@@ -164,7 +167,7 @@ function LoginForm() {
             }}
           >
             <Field label="Username or phone" htmlFor="username">
-              <input id="username" className="input" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+              <input id="username" ref={userRef} className="input" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
             </Field>
             <Field label="Password" htmlFor="password">
               <input id="password" type="password" className="input" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />

@@ -73,6 +73,14 @@ function messageFrom(data: unknown): { message: string; fields: Record<string, s
   return { message, fields };
 }
 
+/** Tells the offline banner whether the API answered (covers Wi-Fi with no internet, which browsers report as online). */
+let lastNet = true;
+function netStatus(ok: boolean) {
+  if (ok === lastNet || typeof window === "undefined") return;
+  lastNet = ok;
+  window.dispatchEvent(new CustomEvent("careslot:net", { detail: ok }));
+}
+
 let refreshing: Promise<boolean> | null = null;
 
 async function refreshAccess(): Promise<boolean> {
@@ -111,8 +119,10 @@ export async function api<T = unknown>(path: string, opts: Options = {}, retried
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     });
   } catch {
+    netStatus(false);
     throw new ApiError(0, "Can't reach the server. Check your internet connection and try again.");
   }
+  netStatus(true);
 
   if (res.status === 401 && token && !retried) {
     refreshing ??= refreshAccess().finally(() => (refreshing = null));
@@ -122,6 +132,13 @@ export async function api<T = unknown>(path: string, opts: Options = {}, retried
   }
   if (res.status === 204) return undefined as T;
   const data = await res.json().catch(() => null);
+  if (res.status === 429) {
+    // Too many sign-in attempts or WhatsApp codes: say how long to wait, in plain words.
+    const secs = Number(/(\d+) second/.exec(String((data as { detail?: string } | null)?.detail))?.[1] || res.headers.get("Retry-After") || 0);
+    const mins = Math.ceil(secs / 60);
+    const wait = !secs ? "a little while" : secs < 60 ? "a minute" : mins < 60 ? `about ${mins} minutes` : "about an hour";
+    throw new ApiError(429, `Too many tries. Please wait ${wait} and try again.`, {}, data);
+  }
   if (!res.ok) {
     const { message, fields } = messageFrom(data);
     throw new ApiError(res.status, message, fields, data);

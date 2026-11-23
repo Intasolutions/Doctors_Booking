@@ -76,7 +76,7 @@ export default function AdminDoctorsPage() {
         title="Doctors"
         description="Add doctors, switch their bookings on or off, and keep their details up to date."
         actions={
-          <Link href="/admin/doctors/new" className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark">
+          <Link href="/admin/doctors/new" className="btn btn-primary">
             <Plus className="size-4" aria-hidden /> Add doctor
           </Link>
         }
@@ -90,7 +90,7 @@ export default function AdminDoctorsPage() {
               role="tab"
               aria-selected={tab === t.key}
               onClick={() => setTab(t.key)}
-              className={`whitespace-nowrap rounded-lg px-3.5 py-1.5 text-sm font-semibold ${tab === t.key ? "bg-brand text-white" : "text-muted hover:text-ink"}`}
+              className={`min-h-9 whitespace-nowrap rounded-lg px-3.5 text-sm font-semibold touch:min-h-11 ${tab === t.key ? "bg-brand text-white" : "text-muted hover:text-ink"}`}
             >
               {t.label} <span className={`ml-1 tabular ${tab === t.key ? "text-white/80" : "text-muted"}`}>{counts[t.key]}</span>
             </button>
@@ -179,18 +179,18 @@ export default function AdminDoctorsPage() {
                     <Switch checked={d.status === "active"} label={`Taking bookings: ${d.name}`} onChange={(on) => setPending({ kind: on ? "activate" : "deactivate", d })} />
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Link href={`/admin/doctors/${d.slug}`} className="rounded-lg bg-brand px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-brand-dark">
+                    <Link href={`/admin/doctors/${d.slug}`} className="btn btn-primary btn-sm">
                       Edit
                     </Link>
-                    <Link href="/portal/availability" onClick={() => openDoctorPortal(d.slug)} className="rounded-lg border border-line px-3 py-1.5 text-[13px] font-semibold hover:border-brand">
+                    <Link href="/portal/availability" onClick={() => openDoctorPortal(d.slug)} className="btn btn-secondary btn-sm hover:border-brand">
                       Hours
                     </Link>
-                    <Link href="/portal" onClick={() => openDoctorPortal(d.slug)} className="rounded-lg border border-line px-3 py-1.5 text-[13px] font-semibold hover:border-brand">
+                    <Link href="/portal" onClick={() => openDoctorPortal(d.slug)} className="btn btn-secondary btn-sm hover:border-brand">
                       Queue
                     </Link>
                     <button
                       onClick={() => setPending({ kind: "delete", d })}
-                      className="ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-red-700 hover:bg-red-50"
+                      className="ml-auto inline-flex min-h-8 items-center gap-1 rounded-lg px-2.5 text-[13px] font-semibold text-red-700 hover:bg-red-50 touch:min-h-11"
                     >
                       <Trash2 className="size-3.5" aria-hidden /> Delete
                     </button>

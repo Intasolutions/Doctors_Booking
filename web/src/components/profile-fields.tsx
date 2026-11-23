@@ -1,7 +1,7 @@
 "use client";
 
 import { DateInput } from "./date-time-inputs";
-import { Field, Segmented } from "./ui";
+import { Field, Segmented, useFocusOnMount } from "./ui";
 
 export type ProfileValues = { name: string; gender: string; date_of_birth: string; email: string; consent: boolean };
 
@@ -27,18 +27,22 @@ export function ProfileFields({
   errors = {},
   showConsent = true,
   afterName,
+  autoFocus,
 }: {
   value: ProfileValues;
   onChange: (v: ProfileValues) => void;
   errors?: Record<string, string>;
   showConsent?: boolean;
   afterName?: React.ReactNode;
+  /** Put the cursor in the name field straight away (registration). */
+  autoFocus?: boolean;
 }) {
+  const nameRef = useFocusOnMount<HTMLInputElement>(!!autoFocus);
   const set = (k: keyof ProfileValues, v: string | boolean) => onChange({ ...value, [k]: v });
   return (
     <>
       <Field label="Full name" htmlFor="rname" error={errors.name}>
-        <input id="rname" className="input" autoComplete="name" value={value.name} onChange={(e) => set("name", e.target.value)} required />
+        <input id="rname" className="input" autoComplete="name" value={value.name} onChange={(e) => set("name", e.target.value)} required ref={nameRef} />
       </Field>
       {afterName}
       <div className="grid gap-1.5">

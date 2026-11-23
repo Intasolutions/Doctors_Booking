@@ -1,9 +1,9 @@
 "use client";
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useState } from "react";
+import { Suspense, useCallback, useRef, useState } from "react";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { PageHeader } from "@/components/page-header";
@@ -13,6 +13,7 @@ import { useToast } from "@/components/toast";
 import { Button, Empty, ErrorNote, Field, Modal, SkeletonList, SourceTag, Spinner, StatusPill } from "@/components/ui";
 import type { AdminDoctor, Page } from "@/lib/admin-types";
 import { api } from "@/lib/api";
+import { useHotkeys } from "@/lib/hotkeys";
 import { fmtDate, fmtTime, rupees, toISODate } from "@/lib/format";
 import type { Appointment } from "@/lib/types";
 
@@ -277,7 +278,7 @@ function NewBooking({ onClose }: { onClose: () => void }) {
                 key={p.id}
                 type="button"
                 onClick={() => setF({ ...f, name: p.name, age: p.age != null ? String(p.age) : "" })}
-                className={`rounded-full border px-3 py-1 text-[13px] font-semibold ${f.name === p.name ? "border-brand bg-brand text-white" : "border-brand/30 bg-surface text-brand-dark hover:border-brand"}`}
+                className={`min-h-9 rounded-full border px-3 text-[13px] font-semibold touch:min-h-11 ${f.name === p.name ? "border-brand bg-brand text-white" : "border-brand/30 bg-surface text-brand-dark hover:border-brand"}`}
               >
                 {p.name}
                 {p.age != null ? `, ${p.age}` : ""}
@@ -321,6 +322,9 @@ function Bookings() {
   const [resetKey, setResetKey] = useState(0);
   const [open, setOpen] = useState<Appointment | null>(null);
   const [creating, setCreating] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  useHotkeys({ "/": () => searchRef.current?.focus(), n: () => setCreating(true) });
   const set = (k: keyof typeof filters, v: string) => {
     setFilters({ ...filters, [k]: v });
     setOffset(0);
@@ -358,8 +362,8 @@ function Bookings() {
         title="Bookings"
         description="Every booking for every doctor. Open one to reschedule, cancel or change its status."
         actions={
-          <Button variant="primary" onClick={() => setCreating(true)}>
-            <Plus className="size-4" aria-hidden /> New booking
+          <Button variant="primary" onClick={() => setCreating(true)} title="New booking (N)">
+            <Plus className="size-4" aria-hidden /> New booking <span className="kbd border-white/30 bg-white/15 text-white">N</span>
           </Button>
         }
       />
@@ -371,19 +375,39 @@ function Bookings() {
             role="tab"
             aria-selected={activeRange === r.key}
             onClick={() => pickRange(r)}
-            className={`whitespace-nowrap rounded-lg px-3.5 py-1.5 text-sm font-semibold ${activeRange === r.key ? "bg-brand text-white" : "text-muted hover:text-ink"}`}
+            className={`min-h-9 whitespace-nowrap rounded-lg px-3.5 text-sm font-semibold touch:min-h-11 ${activeRange === r.key ? "bg-brand text-white" : "text-muted hover:text-ink"}`}
           >
             {r.label}
           </button>
         ))}
       </div>
 
-      <div className="card grid grid-cols-2 gap-3 p-4 lg:grid-cols-3">
-        <label className="relative col-span-2 lg:col-span-3">
-          <span className="sr-only">Search bookings</span>
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
-          <input className="input pl-9" placeholder="Search by patient name, phone, booking ID or reason" value={filters.q} onChange={(e) => set("q", e.target.value)} />
-        </label>
+      <div className="card grid gap-3 p-3 sm:p-4">
+        <div className="flex gap-2">
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">Search bookings</span>
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
+            <input
+              ref={searchRef}
+              type="search"
+              enterKeyHint="search"
+              className="input pl-9 pr-9"
+              placeholder="Search by patient name, phone, booking ID or reason"
+              value={filters.q}
+              onChange={(e) => set("q", e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && set("q", "")}
+            />
+            <span className="kbd pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">/</span>
+          </label>
+          <Button className="lg:hidden" onClick={() => setShowFilters((v) => !v)} aria-expanded={showFilters} aria-controls="booking-filters">
+            <SlidersHorizontal className="size-4" aria-hidden />
+            <span className="hidden sm:inline">Filters</span>
+            {[filters.doctor, filters.status, filters.source].filter(Boolean).length > 0 && (
+              <span className="tabular rounded-full bg-brand px-1.5 text-xs text-white">{[filters.doctor, filters.status, filters.source].filter(Boolean).length}</span>
+            )}
+          </Button>
+        </div>
+        <div id="booking-filters" className={`${showFilters ? "grid" : "hidden"} grid-cols-2 gap-3 lg:grid lg:grid-cols-3`}>
         <Field label="From" htmlFor="ffrom">
           <DateInput key={`from-${resetKey}`} id="ffrom" value={filters.date_from} onChange={(v) => set("date_from", v)} />
         </Field>
@@ -432,6 +456,7 @@ function Bookings() {
             Show everything
           </Button>
         </div>
+        </div>
       </div>
 
       <p className="text-sm text-muted">{q.data ? `${q.data.count} booking${q.data.count === 1 ? "" : "s"}` : ""}</p>
@@ -443,8 +468,8 @@ function Bookings() {
         </Empty>
       )}
 
-      {/* Phones: cards */}
-      <ul className="grid gap-3 md:hidden">
+      {/* Phones and tablets: cards */}
+      <ul className="grid gap-3 md:grid-cols-2 lg:hidden">
         {rows.map((a) => (
           <li key={a.code}>
             <button onClick={() => setOpen(a)} className={`card grid w-full gap-2 p-4 text-left hover:border-brand ${a.status === "cancelled" ? "opacity-60" : ""}`}>
@@ -466,9 +491,9 @@ function Bookings() {
         ))}
       </ul>
 
-      {/* Tablets and computers: table */}
+      {/* Computers: table */}
       {rows.length > 0 && (
-        <div className="card hidden overflow-x-auto md:block">
+        <div className="card hidden overflow-x-auto lg:block">
           <table className="w-full min-w-[56rem] border-collapse text-sm">
             <thead>
               <tr className="bg-canvas text-left">

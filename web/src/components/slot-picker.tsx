@@ -106,7 +106,7 @@ export function SlotPicker({
                 title={TIP[s.status]}
                 onClick={() => onTime(s.time)}
                 aria-pressed={s.time === time}
-                className={`tabular rounded-lg border px-1 py-2 text-[13px] font-semibold transition ${
+                className={`tabular min-h-10 rounded-lg border px-1 text-[13px] font-semibold transition touch:min-h-11 touch:text-sm ${
                   s.time === time
                     ? "border-brand bg-brand text-white"
                     : s.status === "free"

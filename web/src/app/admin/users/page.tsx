@@ -4,7 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { PageHeader } from "@/components/page-header";
@@ -14,6 +14,7 @@ import type { AdminUser, Page } from "@/lib/admin-types";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fmtStamp } from "@/lib/format";
+import { useHotkeys } from "@/lib/hotkeys";
 
 const ROLE_LABEL: Record<string, string> = { admin: "Admin", doctor: "Doctor", patient: "Patient" };
 const ROLE_STYLE: Record<string, string> = { admin: "bg-ink text-white", doctor: "bg-brand-soft text-brand-dark", patient: "bg-accent-soft text-accent-dark" };
@@ -135,7 +136,7 @@ function ManageUser({ u, onClose }: { u: AdminUser; onClose: () => void }) {
         {u.role === "patient" ? ` · ${u.bookings} booking${u.bookings === 1 ? "" : "s"}` : ""}
       </p>
       {u.role === "doctor" && u.doctor && (
-        <Link href={`/admin/doctors/${u.doctor.slug}`} className="rounded-lg bg-brand-soft px-3 py-2 text-sm font-semibold text-brand-dark">
+        <Link href={`/admin/doctors/${u.doctor.slug}`} className="btn bg-brand-soft text-brand-dark">
           Edit this doctor&apos;s profile and clinic →
         </Link>
       )}
@@ -243,6 +244,8 @@ function Users() {
   const search = useSearchParams();
   const [role, setRole] = useState(search.get("role") ?? "");
   const [q, setQ] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  useHotkeys({ "/": () => searchRef.current?.focus() });
   const [offset, setOffset] = useState(0);
   const [open, setOpen] = useState<AdminUser | null>(null);
   const [adding, setAdding] = useState(false);
@@ -278,7 +281,8 @@ function Users() {
         <label className="relative">
           <span className="sr-only">Search people</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
-          <input className="input pl-9" placeholder="Search by name, phone, username or email" value={q} onChange={(e) => (setQ(e.target.value), setOffset(0))} />
+          <input ref={searchRef} type="search" enterKeyHint="search" className="input pl-9 pr-9" placeholder="Search by name, phone, username or email" value={q} onChange={(e) => (setQ(e.target.value), setOffset(0))} onKeyDown={(e) => e.key === "Escape" && (setQ(""), setOffset(0))} />
+          <span className="kbd pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">/</span>
         </label>
       </div>
       {list.isLoading && <SkeletonList rows={4} />}

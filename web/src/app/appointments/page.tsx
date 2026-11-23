@@ -50,10 +50,10 @@ function Row({ a }: { a: Appointment }) {
         <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-1">
           {(
             <>
-              <a href={a.doctor.directions_url} target="_blank" rel="noopener" className="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-[13px] font-semibold hover:border-muted">
+              <a href={a.doctor.directions_url} target="_blank" rel="noopener" className="btn btn-secondary btn-sm gap-1">
                 <MapPin className="size-3.5" aria-hidden /> Directions
               </a>
-              <Link href={`/appointments/${a.code}/reschedule`} className="rounded-lg border border-line px-2.5 py-1.5 text-[13px] font-semibold hover:border-muted">
+              <Link href={`/appointments/${a.code}/reschedule`} className="btn btn-secondary btn-sm">
                 Reschedule
               </Link>
               <Button size="sm" variant="danger" onClick={() => setConfirming(true)}>

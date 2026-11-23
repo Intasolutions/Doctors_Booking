@@ -17,7 +17,7 @@ function CopyRow({ id, label, value }: { id: string; label: string; value: strin
   return (
     <Field label={label} htmlFor={id}>
       <div className="flex gap-2">
-        <input id={id} readOnly className="input font-mono text-[12.5px]" value={value} onFocus={(e) => e.target.select()} />
+        <input id={id} readOnly className="input font-mono text-[12.5px] touch:text-base" value={value} onFocus={(e) => e.target.select()} />
         <Button
           onClick={() =>
             navigator.clipboard
